@@ -75,5 +75,6 @@ int main(int argc, char *argv[])
 	printf("The total score for part 1 would be %d\n", score1);
 	printf("The total score for part 2 would be %d\n", score2);
 
+	fclose(in_file);
 	return EXIT_SUCCESS;
 }
