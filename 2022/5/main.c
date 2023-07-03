@@ -44,6 +44,9 @@ int main(int argc, char *argv[])
 	int num_crate_in_line = 1;
 	int max_num_crate = 0;
 	int max_height_stack = 0;
+	int num_to_move = 0;
+	int move_from = 0;
+	int move_to = 0;
 
 	// Iterate over the file a line at a time
 	while(fgets(buffer, sizeof(buffer), in_file) != NULL && num_crate_in_line) {
@@ -61,13 +64,13 @@ int main(int argc, char *argv[])
 			strcpy(marker, buffer);
 		}
 	}
-	printf("Max num crate: %d Max height stack: %d\n", max_num_crate, max_height_stack);
+	printf("Max num crate: %d Max height stack: %d\n", max_num_crate, max_height_stack*max_num_crate);
 	// Initialize our crates
 	crates = (struct stack*)malloc(max_num_crate*sizeof(struct stack));
 	for (int i=0; i<max_num_crate; i=i+1) {
-		crates[i].max_height = max_height_stack;
+		crates[i].max_height = max_height_stack*max_num_crate;
 		crates[i].height = 0;
-		crates[i].crate = (char*)malloc(max_height_stack*sizeof(char));
+		crates[i].crate = (char*)malloc(crates[i].max_height*sizeof(char));
 	}
 	// Start moving back up the file through the crates
 	line_length = strlen(marker);
@@ -86,9 +89,20 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	for(int i=0; i<max_num_crate; i=i+1) {
-		printf("Value in crate %d is %c\n", i, pop(&crates[i]));
+	// Seek back to the end of the crates
+	fseek(in_file, (line_length*max_height_stack)+1, SEEK_CUR);
+
+	char a = 'c';
+	while(fscanf(in_file, "move %d from %d to %d\n", &num_to_move, &move_from, &move_to) == 3) {
+		for (int i=0; i<num_to_move; i=i+1) {
+			push(&crates[move_to-1], pop(&crates[move_from-1]));
+		}
 	}
+	printf("Top of each stack: ");
+	for (int i=0; i<max_num_crate; i=i+1) {
+		printf("%c", pop(&crates[i]));
+	}
+	printf("\n");
 
 	// Free our memory
 	for (int i=0; i<max_num_crate; i=i+1) {
