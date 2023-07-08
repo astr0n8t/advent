@@ -33,6 +33,69 @@ void down(int** forest, int** visible, int* height, int max, int x, int y) {
 		visible[x][y] = visible[x][y]*VISIBLE_DOWN;
 	}
 }
+
+int score(int** forest, int** visible, int max, int x, int y) {
+	int score = 1;
+	int tmp;
+
+	tmp = 0;
+	if (x-tmp-1 == -1) {
+		return 1;
+	}
+	while (x-tmp-1 >= 0) {
+		if (forest[x][y] > forest[x-tmp-1][y]) {
+			tmp = tmp + 1;
+		}
+		else {
+			tmp = tmp + 1;
+			break;
+		}
+	}
+	score = score*tmp;
+	tmp = 0;
+	if (y-tmp-1 == -1) {
+		return 1;
+	}
+	while (y-tmp-1 >= 0) {
+		if (forest[x][y] > forest[x][y-tmp-1]) {
+			tmp = tmp + 1;
+		}
+		else {
+			tmp = tmp + 1;
+			break;
+		}
+	}
+	score = score*tmp;
+	tmp = 0;
+	if (y+tmp+1 == max) {
+		return 1;
+	}
+	while (y+tmp+1 < max) {
+		if (forest[x][y] > forest[x][y+tmp+1]) {
+			tmp = tmp + 1;
+		}
+		else {
+			tmp = tmp + 1;
+			break;
+		}
+	}
+	score = score*tmp;
+	tmp = 0;
+	if (x+tmp == max) {
+		return 1;
+	}
+	while (x+tmp+1 < max) {
+		if (forest[x][y] > forest[x+tmp+1][y]) {
+			tmp = tmp + 1;
+		}
+		else {
+			tmp = tmp + 1;
+			break;
+		}
+	}
+	score = score*tmp;
+	return score;
+}
 		
 int main(int argc, char *argv[])
 {
@@ -50,6 +113,8 @@ int main(int argc, char *argv[])
 	char curr;
 	int size_of_forest = 0;
 	int num_visible = 0;
+	int curr_score = 0;
+	int highest_score = 0;
 
 	// Iterate to get length of line
 	while(curr != EOF && curr != '\n') {
@@ -101,25 +166,16 @@ int main(int argc, char *argv[])
 			if (visible[i][j] != 1) {
 				num_visible = num_visible + 1;
 			}
+			curr_score = score(forest, visible, size_of_forest, i, j);
+			if (curr_score > highest_score) {
+				highest_score = curr_score;
+			}
 		}
-	}
-
-	for (int i=0;i<size_of_forest;i=i+1) {
-		for (int j=0;j<size_of_forest;j=j+1) {
-			printf("%4d", forest[i][j]);
-		}
-		printf("\n");
-	}
-	printf("\n");
-	for (int i=0;i<size_of_forest;i=i+1) {
-		for (int j=0;j<size_of_forest;j=j+1) {
-			printf("%4d", visible[i][j]);
-		}
-		printf("\n");
 	}
 
 	// Solve part one
 	printf("Number of trees visible: %d\n", num_visible);
+	printf("Best tree score: %d\n", highest_score);
 
 	// Free all the memory we allocated
 	free(forest);
