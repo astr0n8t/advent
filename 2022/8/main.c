@@ -2,23 +2,31 @@
 #include <stdio.h>
 #include <string.h>
 
+// Define each value as a prime so we can get whether a tree
+// is visible from a certain direction by checking whether 
+// it is divisible by that prime.  I didn't end up needing this
+// for the challenge but I thought it was cool enough to leave
+// in the code
 #define VISIBLE_UP 2
 #define VISIBLE_DOWN 3
 #define VISIBLE_LEFT 5
 #define VISIBLE_RIGHT 7
 
-void up(int** forest, int** visible, int* height, int max, int x, int y) {
+// Check if the tree is visible from the top down
+void top(int** forest, int** visible, int* height, int max, int x, int y) {
 	if (forest[x][y] > height[y]) {
 		height[y] = forest[x][y];
 		visible[x][y] = visible[x][y]*VISIBLE_UP;
 	}
 }
+// Check if the tree is visible from left to right
 void left(int** forest, int** visible, int* height, int max, int y, int x) {
 	if (forest[x][y] > height[x+max]) {
 		height[x+max] = forest[x][y];
 		visible[x][y] = visible[x][y]*VISIBLE_LEFT;
 	}
 }
+// Check if the tree is visible from right to left
 void right(int** forest, int** visible, int* height, int max, int y, int x) {
 	y = max - y - 1;
 	if (forest[x][y] > height[x+max*2]) {
@@ -26,7 +34,8 @@ void right(int** forest, int** visible, int* height, int max, int y, int x) {
 		visible[x][y] = visible[x][y]*VISIBLE_RIGHT;
 	}
 }
-void down(int** forest, int** visible, int* height, int max, int x, int y) {
+// Check if the tree is visible from bottom to top
+void bottom(int** forest, int** visible, int* height, int max, int x, int y) {
 	x = max - x - 1;
 	if (forest[x][y] > height[y+max*3]) {
 		height[y+max*3] = forest[x][y];
@@ -34,66 +43,57 @@ void down(int** forest, int** visible, int* height, int max, int x, int y) {
 	}
 }
 
+// This function gets the number of trees we can see from a specific
+// tree for part two;  I wanted to find a way to do this function
+// a bit better, but for some reason this is the best I could 
+// come up with
 int score(int** forest, int** visible, int max, int x, int y) {
 	int score = 1;
 	int tmp;
 
-	tmp = 0;
-	if (x-tmp-1 == -1) {
-		return 1;
-	}
-	while (x-tmp-1 >= 0) {
-		if (forest[x][y] > forest[x-tmp-1][y]) {
+	// Check to make sure we're not on an edge
+	if (x && y && (max-x-1) && (max-y-1)) {
+		tmp = 0;
+		// Check from the top
+		while (x-tmp-1 > -1) {
 			tmp = tmp + 1;
+			// Our stopping condition
+			// but we need to note that we can still
+			// see this tree so we can't include it
+			// in the while loop
+			if (forest[x][y] <= forest[x-tmp][y]) {
+				break;
+			}
 		}
-		else {
+		score = score*tmp;
+		tmp = 0;
+		// Check from the left
+		while (y-tmp-1 > -1) {
 			tmp = tmp + 1;
-			break;
+			if (forest[x][y] <= forest[x][y-tmp]) {
+				break;
+			}
 		}
-	}
-	score = score*tmp;
-	tmp = 0;
-	if (y-tmp-1 == -1) {
-		return 1;
-	}
-	while (y-tmp-1 >= 0) {
-		if (forest[x][y] > forest[x][y-tmp-1]) {
+		score = score*tmp;
+		tmp = 0;
+		// Check from the right
+		while (y+tmp+1 < max) {
 			tmp = tmp + 1;
+			if (forest[x][y] <= forest[x][y+tmp]) {
+				break;
+			}
 		}
-		else {
+		score = score*tmp;
+		tmp = 0;
+		// Check from the bottom
+		while (x+tmp+1 < max) {
 			tmp = tmp + 1;
-			break;
+			if (forest[x][y] <= forest[x+tmp][y]) {
+				break;
+			}
 		}
+		score = score*tmp;
 	}
-	score = score*tmp;
-	tmp = 0;
-	if (y+tmp+1 == max) {
-		return 1;
-	}
-	while (y+tmp+1 < max) {
-		if (forest[x][y] > forest[x][y+tmp+1]) {
-			tmp = tmp + 1;
-		}
-		else {
-			tmp = tmp + 1;
-			break;
-		}
-	}
-	score = score*tmp;
-	tmp = 0;
-	if (x+tmp == max) {
-		return 1;
-	}
-	while (x+tmp+1 < max) {
-		if (forest[x][y] > forest[x+tmp+1][y]) {
-			tmp = tmp + 1;
-		}
-		else {
-			tmp = tmp + 1;
-			break;
-		}
-	}
-	score = score*tmp;
 	return score;
 }
 		
@@ -151,21 +151,24 @@ int main(int argc, char *argv[])
 		getc(in_file);
 	}
 
-	// print out visible
-	// Iterate for all except the last line
+	// Go through our arrays and find all the trees which are visible
 	for (int i=0;i<size_of_forest;i=i+1) {
 		for (int j=0;j<size_of_forest;j=j+1) {
-			up(forest, visible, height, size_of_forest, i, j);
+			top(forest, visible, height, size_of_forest, i, j);
 			left(forest, visible, height, size_of_forest, i, j);
 			right(forest, visible, height, size_of_forest, i, j);
-			down(forest, visible, height, size_of_forest, i, j);
+			bottom(forest, visible, height, size_of_forest, i, j);
 		}
 	}
+	// Go through the arrays and add up the number of visible trees
+	// Also find the tree with the most trees visible from it
 	for (int i=0;i<size_of_forest;i=i+1) {
 		for (int j=0;j<size_of_forest;j=j+1) {
+			// Check if tree is visible from outside the forest
 			if (visible[i][j] != 1) {
 				num_visible = num_visible + 1;
 			}
+			// Check if this tree can see more trees than the previous best
 			curr_score = score(forest, visible, size_of_forest, i, j);
 			if (curr_score > highest_score) {
 				highest_score = curr_score;
@@ -175,6 +178,7 @@ int main(int argc, char *argv[])
 
 	// Solve part one
 	printf("Number of trees visible: %d\n", num_visible);
+	// Solve part two
 	printf("Best tree score: %d\n", highest_score);
 
 	// Free all the memory we allocated
