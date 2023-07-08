@@ -127,7 +127,6 @@ int main(int argc, char *argv[])
 		exit(-1);
 	}
 	// Declare our stack vars
-	// and root fs
 	char direction;
 	int move;
 	struct point rope[10];
