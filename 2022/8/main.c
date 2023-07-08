@@ -7,17 +7,31 @@
 #define VISIBLE_LEFT 5
 #define VISIBLE_RIGHT 7
 
-void up(int** forest, int** visible, int size_of_forest) {
-
-	// Iterate for all except the last line
-	for (int i=1;i<size_of_forest-1;i=i+1) {
-		for (int j=1;j<size_of_forest-1;j=j+1) {
-			if (forest[i][j] > forest[i-1][j] && visible[i-1][j] % VISIBLE_UP == 0) {
-				visible[i][j] = visible[i][j]*VISIBLE_UP;
-			}
-		}
+void up(int** forest, int** visible, int* height, int max, int x, int y) {
+	if (forest[x][y] > height[y]) {
+		height[y] = forest[x][y];
+		visible[x][y] = visible[x][y]*VISIBLE_UP;
 	}
-
+}
+void left(int** forest, int** visible, int* height, int max, int y, int x) {
+	if (forest[x][y] > height[x+max]) {
+		height[x+max] = forest[x][y];
+		visible[x][y] = visible[x][y]*VISIBLE_LEFT;
+	}
+}
+void right(int** forest, int** visible, int* height, int max, int y, int x) {
+	y = max - y - 1;
+	if (forest[x][y] > height[x+max*2]) {
+		height[x+max*2] = forest[x][y];
+		visible[x][y] = visible[x][y]*VISIBLE_RIGHT;
+	}
+}
+void down(int** forest, int** visible, int* height, int max, int x, int y) {
+	x = max - x - 1;
+	if (forest[x][y] > height[y+max*3]) {
+		height[y+max*3] = forest[x][y];
+		visible[x][y] = visible[x][y]*VISIBLE_DOWN;
+	}
 }
 		
 int main(int argc, char *argv[])
@@ -32,8 +46,10 @@ int main(int argc, char *argv[])
 	// and root fs
 	int** forest;
 	int** visible;
+	int* height;
 	char curr;
 	int size_of_forest = 0;
+	int num_visible = 0;
 
 	// Iterate to get length of line
 	while(curr != EOF && curr != '\n') {
@@ -47,10 +63,15 @@ int main(int argc, char *argv[])
 	// Allocate our arrays
 	forest = (int**)malloc(sizeof(int*)*size_of_forest+sizeof(int)*size_of_forest*size_of_forest);
 	visible = (int**)malloc(sizeof(int*)*size_of_forest+sizeof(int)*size_of_forest*size_of_forest);
+	height = (int*)malloc(sizeof(int)*size_of_forest*4);
 	// Do some pointer math to setup our arrays properly
 	for (int i=0;i<size_of_forest;i=i+1) {
 		forest[i] = (int *)((int *)(forest+size_of_forest)+size_of_forest*i);
 		visible[i] = (int *)((int *)(visible+size_of_forest)+size_of_forest*i);
+		height[i] = -1;
+		height[i+size_of_forest] = -1;
+		height[i+size_of_forest*2] = -1;
+		height[i+size_of_forest*3] = -1;
 	}
 
 	// Go through the file and grab each tree
@@ -64,27 +85,46 @@ int main(int argc, char *argv[])
 		// Get rid of newline
 		getc(in_file);
 	}
-	// Set our outside boundaries to visible from their respective directions
-	for(int i=0;i<size_of_forest;i=i+1) {
-		visible[0][i] = visible[0][i]*VISIBLE_UP;
-		visible[i][0] = visible[i][0]*VISIBLE_LEFT;
-		visible[i][size_of_forest-1] = visible[i][size_of_forest-1]*VISIBLE_RIGHT;
-		visible[size_of_forest-1][i] = visible[size_of_forest-1][i]*VISIBLE_DOWN;
-	}
-	up(forest, visible, size_of_forest);
+
 	// print out visible
+	// Iterate for all except the last line
 	for (int i=0;i<size_of_forest;i=i+1) {
 		for (int j=0;j<size_of_forest;j=j+1) {
-			printf("%d", visible[i][j]);
+			up(forest, visible, height, size_of_forest, i, j);
+			left(forest, visible, height, size_of_forest, i, j);
+			right(forest, visible, height, size_of_forest, i, j);
+			down(forest, visible, height, size_of_forest, i, j);
+		}
+	}
+	for (int i=0;i<size_of_forest;i=i+1) {
+		for (int j=0;j<size_of_forest;j=j+1) {
+			if (visible[i][j] != 1) {
+				num_visible = num_visible + 1;
+			}
+		}
+	}
+
+	for (int i=0;i<size_of_forest;i=i+1) {
+		for (int j=0;j<size_of_forest;j=j+1) {
+			printf("%4d", forest[i][j]);
+		}
+		printf("\n");
+	}
+	printf("\n");
+	for (int i=0;i<size_of_forest;i=i+1) {
+		for (int j=0;j<size_of_forest;j=j+1) {
+			printf("%4d", visible[i][j]);
 		}
 		printf("\n");
 	}
 
 	// Solve part one
+	printf("Number of trees visible: %d\n", num_visible);
 
 	// Free all the memory we allocated
 	free(forest);
 	free(visible);
+	free(height);
 
 	fclose(in_file);
 	return EXIT_SUCCESS;
