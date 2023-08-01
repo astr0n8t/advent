@@ -18,6 +18,82 @@ struct ValveList {
 	int size;
 };
 
+struct ValveList deepcopy(struct ValveList src) {
+	struct ValveList dst = src;
+	dst.list = (struct Valve*)malloc(sizeof(struct Valve)*dst.size);
+	for (int i=0; i<dst.size; i++) {
+		dst.list[i] = src.list[i];
+	}
+	return dst;
+}
+
+void calculatecost(struct ValveList valves, int** costtable) {
+
+	// Set costs of depth 1
+	for (int i=0; i<valves.size; i++) {
+		for (int j=0; j<valves.list[i].num_leads; j++) {
+			costtable[i][valves.list[i].leads[j]] = 1;
+		}
+	}
+
+	// Calculate depths up to the number of valves
+	for (int x=0; x<valves.size; x++) {
+		// Iterate over the costtable
+		for (int i=0; i<valves.size; i++) {
+			for (int j=0; j<valves.size; j++) {
+				// Check if the cost exists
+				if (costtable[i][j]) {
+					// If it does iterate over every lead in j
+					for (int k=0; k<valves.list[j].num_leads; k++) {
+						// For every lead check if the distance exists and that i is not equal to the lead
+						if(!costtable[i][valves.list[j].leads[k]] && i != valves.list[j].leads[k]) {
+							// Otherwise the shortest distance to this lead is the cost of i to j plus one
+							costtable[i][valves.list[j].leads[k]] = costtable[i][j] + 1;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	return;
+}
+
+int opportunitycost(struct ValveList prev, int** costtable, int time, int curr, int dst) {
+	if (time-1 <= costtable[curr][dst]) {
+		return 0;
+	}
+	
+	struct ValveList valves = deepcopy(prev);
+	int base_cost = valves.list[dst].rate*(time-1-costtable[curr][dst]);
+	valves.list[dst].state = VALVEOPEN;
+	int best_cost = 0;
+	int curr_cost = 0;
+	for (int i=0; i<valves.size; i++) {
+		if (valves.list[i].rate > 0 && valves.list[i].state == VALVECLOSE) {
+			curr_cost = opportunitycost(valves, costtable, time-1-costtable[curr][dst], dst, i);
+			if (curr_cost > best_cost) {
+				best_cost = curr_cost;
+			}
+		}
+	}
+	free(valves.list);
+
+	return best_cost+base_cost;
+}
+
+
+void printcosttable(struct ValveList valves, int** costtable) {
+	for (int i=0; i<valves.size; i++) {
+		for (int j=0; j<valves.size; j++) {
+			printf("%d ", costtable[i][j]);
+		}
+		printf("\n");
+	}
+	return;
+}
+
+
 int findvalveindex(char name[3], struct ValveList valves) {
 	int index = 0;
 	for (int i=0; i<valves.size; i++) {
@@ -89,34 +165,38 @@ struct ValveList processinput(FILE *in_file) {
 
 int part1(struct ValveList valves) {
 	int released_pressure = 0;
-	int current_valve = 0;
-	int target_valve = 0;
+	int most_pressure = 0;
+	int start_index = 0;
 
-	for (int min=0; min<30; min++) {
-		for (int i=0; i<valves.size; i++) {
-			if (valves.list[i].state == VALVEOPEN) {
-				released_pressure = released_pressure + valves.list[i].rate;
-			}
+	// Allocate memory for our costtable and zero out the 2d array
+	int** costtable = (int**)malloc(sizeof(int*)*valves.size+sizeof(int)*valves.size*valves.size);
+	for (int i=0;i<valves.size;i++) {
+		costtable[i] = (int*)((int*)(costtable+valves.size)+valves.size*i);
+		for (int j=0;j<valves.size;j++) {
+			costtable[i][j] = 0;
 		}
-
-		// Check if we're at target
-		if (current_valve == target_valve) {
-			// Check if we need to open target
-			if (valves.list[current_valve].state == VALVECLOSE && valves.list[current_valve].flow != 0) {
-			}
-			// Find new target
-			else {
-			}
-		}
-		// Otherwise move towards target
-		else {
-		}
-
-
-
 	}
 
-	return released_pressure;
+	// Calculate the cost to get to each vertex
+	calculatecost(valves, costtable);
+
+	
+	for (int i=0; i<valves.size; i++) {
+		if (strcmp("AA", valves.list[i].name) == 0) {
+			start_index = i;
+			break;
+		}
+	}
+
+	for (int i=0; i<valves.size; i++) {
+		released_pressure = opportunitycost(valves, costtable, 30, start_index, i);
+		if (released_pressure > most_pressure) {
+			most_pressure = released_pressure;
+		}
+	}
+
+	free(costtable);
+	return most_pressure;
 }
 
 int main(int argc, char *argv[])
