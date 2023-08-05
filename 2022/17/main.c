@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
+#include <limits.h>
 
 // Define values
 #define TYPE1 0
@@ -31,6 +32,11 @@ struct Rock {
 struct String {
 	char* array;
 	size_t size;
+};
+
+struct Round {
+	int round;
+	int height;
 };
 
 // Check if the coords are equal to the point
@@ -151,7 +157,7 @@ int touchrock(struct Rock a, struct Rock b) {
 
 
 // Returns highest height of the bottom
-int highest(struct Rock history[2022], int curr) {
+int highest(struct Rock* history, int curr) {
 	int h = 0;
 	for (int i=0; i<curr; i++) {
 		if (history[i].coords.y > h) {
@@ -160,7 +166,7 @@ int highest(struct Rock history[2022], int curr) {
 	}
 	return h;
 }
-struct Rock left(struct Rock c, struct Rock history[2022], int curr) {
+struct Rock left(struct Rock c, struct Rock* history, int curr) {
 	int move = 0;
 	struct Point leftb = {.x=0};
 	struct Rock tmp;
@@ -193,7 +199,7 @@ struct Rock left(struct Rock c, struct Rock history[2022], int curr) {
 	return c;
 }
 
-struct Rock right(struct Rock c, struct Rock history[2022], int curr) {
+struct Rock right(struct Rock c, struct Rock* history, int curr) {
 	int move = 0;
 	struct Point rightb = {.x=6};
 	struct Rock tmp;
@@ -221,7 +227,7 @@ struct Rock right(struct Rock c, struct Rock history[2022], int curr) {
 	return c;
 }
 
-struct Rock down(struct Rock c, struct Rock history[2022], int curr) {
+struct Rock down(struct Rock c, struct Rock* history, int curr) {
 	int move = 1;
 	struct Rock tmp;
 	static int starting_heights[5] = {1, 3, 3, 4, 2};
@@ -250,46 +256,81 @@ struct Rock down(struct Rock c, struct Rock history[2022], int curr) {
 	return c;
 }
 
+int droprock(struct Rock* history, int i, struct String wind, int curr) {
+	static int starting_heights[5] = {1, 3, 3, 4, 2};
+	if (curr>0) {
+		history[i].type = (history[i-1].type+1) % 5;
+	}
+	else {
+		history[i].type = TYPE1;
+	}
+	history[i].coords.x = 2;
+	history[i].coords.y = highest(history, i) + starting_heights[history[i].type] + 3;
+	history[i].state = FALL;
+	while (history[i].state != REST) {
+		switch (wind.array[curr]) {
+			case RIGHT:
+				history[i] = right(history[i], history, i);
+				break;
+			case LEFT:
+				history[i] = left(history[i], history, i);
+				break;
+		}
+		curr = (curr+1) % wind.size;
+		history[i] = down(history[i], history, i);
+
+	}
+	return curr;
+}
+
 int part1(struct String wind) {
 	// Declare stack vars
 	struct Rock history[2022];
-	static int starting_heights[5] = {1, 3, 3, 4, 2};
-	struct Point tmp;
 	int curr = 0;
-	// Create our bottom from (0,0) to (6,0)
-	struct Point bottom[7];
-	for (int i=0; i<7; i++) {
-		bottom[i].x = i;
-		bottom[i].y = 0;
-	}
 
 	// Enter our main loop
 	for (int i=0; i<2022; i++) {
-		if (i>0) {
-			history[i].type = (history[i-1].type+1) % 5;
-		}
-		else {
-			history[i].type = TYPE1;
-		}
-		history[i].coords.x = 2;
-		history[i].coords.y = highest(history, i) + starting_heights[history[i].type] + 3;
-		history[i].state = FALL;
-		while (history[i].state != REST) {
-			switch (wind.array[curr]) {
-				case RIGHT:
-					history[i] = right(history[i], history, i);
-					break;
-				case LEFT:
-					history[i] = left(history[i], history, i);
-					break;
-			}
-			curr = (curr+1) % wind.size;
-			history[i] = down(history[i], history, i);
-
-		}
+		curr = droprock(history, i, wind, curr);
 	}
 
 	return highest(history, 2022);
+}
+
+long part2(struct String wind) {
+	long result = 0;
+	long quotient = 0;
+	long remainder = 0;
+	int curr = 0;
+	int key = 0;
+	int mask = 10;
+	static long num_rounds = 1000000000000;
+	struct Rock* history = (struct Rock*)malloc(sizeof(struct Rock)*wind.size*5);
+	struct Round* rounds = (struct Round*)malloc(sizeof(struct Round)*wind.size*5);
+	for (int i=0; i<wind.size*5; i++) {
+		rounds[i].round = 0;
+		rounds[i].height = 0;
+	}
+	
+	for (int i=0; i<INT_MAX && !result; i++) {
+		key = (i%5)*wind.size+curr;
+		if (rounds[key].height) {
+			quotient = (1000000000000L - (long)i) / (long)(i-rounds[key].round);
+			remainder = (1000000000000L - (long)i) % (long)(i-rounds[key].round);
+			if (remainder == 0L) {
+				result = highest(history, i);
+				result = (long)result+(long)(result-rounds[key].height)*quotient;
+			}
+		}
+		else {
+			rounds[key].height = highest(history, i);
+			rounds[key].round = i;
+		}
+		curr = droprock(history, i, wind, curr);
+	}
+
+	free(history);
+	free(rounds);
+	return result;
 }
 
 // Function to parse the input file and return
@@ -333,7 +374,8 @@ int main(int argc, char *argv[])
 	// Get our wind from the input file
 	struct String wind = processinput(in_file);
 	// Solve part 1
-	printf("The height of the rocks is %d\n", part1(wind));
+	printf("The height of the rocks after 2022 rounds is %d\n", part1(wind));
+	printf("The height of the rocks after 1000000000000 rounds is %ld\n", part2(wind));
 	// Clean up memory
 	free(wind.array);
 	// Close our file
