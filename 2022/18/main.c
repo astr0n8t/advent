@@ -21,6 +21,126 @@ struct CubeList {
 	size_t size;
 };
 
+void fillcracks(struct Space environment, struct Cube c) {
+	struct Cube tmp = c;
+	if (environment.array[c.x+1][c.y][c.z] == 0) {
+		tmp.x = c.x+1;
+		environment.array[c.x+1][c.y][c.z] = 2;
+		fillcracks(environment, tmp);
+	}
+	if (environment.array[c.x-1][c.y][c.z] == 0) {
+		tmp = c;
+		tmp.x = c.x-1;
+		environment.array[c.x-1][c.y][c.z] = 2;
+		fillcracks(environment, tmp);
+	}
+	if (environment.array[c.x][c.y+1][c.z] == 0) {
+		tmp = c;
+		tmp.y = c.y+1;
+		environment.array[c.x][c.y+1][c.z] = 2;
+		fillcracks(environment, tmp);
+	}
+	if (environment.array[c.x][c.y-1][c.z] == 0) {
+		tmp = c;
+		tmp.y = c.y-1;
+		environment.array[c.x][c.y-1][c.z] = 2;
+		fillcracks(environment, tmp);
+	}
+	if (environment.array[c.x][c.y][c.z+1] == 0) {
+		tmp = c;
+		tmp.z = c.z+1;
+		environment.array[c.x][c.y][c.z+1] = 2;
+		fillcracks(environment, tmp);
+	}
+	if (environment.array[c.x][c.y][c.z-1] == 0) {
+		tmp = c;
+		tmp.z = c.z-1;
+		environment.array[c.x][c.y][c.z-1] = 2;
+		fillcracks(environment, tmp);
+	}
+	return;
+}
+
+
+void waterfill(struct Space environment) {
+	struct Cube tmp;
+
+	for (int x=0; x<environment.width; x++) {
+		for (int y=0; y<environment.height; y++) {
+			for (int z=0; z<environment.depth; z++) {
+				if (environment.array[x][y][z]==1) {
+					break;
+				}
+				else {
+					environment.array[x][y][z] = 2;
+				}
+			}
+			for (int z=environment.depth-1; z>-1; z--) {
+				if (environment.array[x][y][z]==1) {
+					break;
+				}
+				else {
+					environment.array[x][y][z] = 2;
+				}
+			}
+		}
+	}
+	for (int y=0; y<environment.height; y++) {
+		for (int z=0; z<environment.depth; z++) {
+			for (int x=0; x<environment.width; x++) {
+				if (environment.array[x][y][z]==1) {
+					break;
+				}
+				else {
+					environment.array[x][y][z] = 2;
+				}
+			}
+			for (int x=environment.width-1; x>-1; x--) {
+				if (environment.array[x][y][z]==1) {
+					break;
+				}
+				else {
+					environment.array[x][y][z] = 2;
+				}
+			}
+		}
+	}
+	for (int z=0; z<environment.depth; z++) {
+		for (int x=0; x<environment.width; x++) {
+			for (int y=0; y<environment.height; y++) {
+				if (environment.array[x][y][z]==1) {
+					break;
+				}
+				else {
+					environment.array[x][y][z] = 2;
+				}
+			}
+			for (int y=environment.height-1; y>-1; y--) {
+				if (environment.array[x][y][z]==1) {
+					break;
+				}
+				else {
+					environment.array[x][y][z] = 2;
+				}
+			}
+		}
+	}
+
+	for (int x=1; x<environment.width-1; x++) {
+		for (int y=1; y<environment.height-1; y++) {
+			for (int z=1; z<environment.depth-1; z++) {
+				if (environment.array[x][y][z] == 2) {
+					tmp.x = x;
+					tmp.y = y;
+					tmp.z = z;
+					fillcracks(environment, tmp);
+				}
+			}
+		}
+	}
+	return;
+}
+
 // Solve part1
 int part1(struct Space environment, struct CubeList list) {
 	int result = 0;
@@ -37,8 +157,31 @@ int part1(struct Space environment, struct CubeList list) {
 }
 
 // Solve part2
-int part2() {
-	return 0;
+int part2(struct Space environment, struct CubeList list) {
+	waterfill(environment);
+	int result = 0;
+	int collision_check = 0;
+	for (int i=0; i<list.size; i++) {
+		if(environment.array[list.array[i].x+1][list.array[i].y][list.array[i].z]==2) {
+			result++;
+		}
+		if(environment.array[list.array[i].x-1][list.array[i].y][list.array[i].z]==2) {
+			result++;
+		}
+		if(environment.array[list.array[i].x][list.array[i].y+1][list.array[i].z]==2) {
+			result++;
+		}
+		if(environment.array[list.array[i].x][list.array[i].y-1][list.array[i].z]==2) {
+			result++;
+		}
+		if(environment.array[list.array[i].x][list.array[i].y][list.array[i].z+1]==2) {
+			result++;
+		}
+		if(environment.array[list.array[i].x][list.array[i].y][list.array[i].z-1]==2) {
+			result++;
+		}
+	}
+	return result;
 }
 
 // Function to parse the input file and return
@@ -95,7 +238,6 @@ struct Space processinput(FILE *in_file, struct CubeList* list) {
 		}
 	}
 
-	printf("Space dimensions: %d %d %d\n", output.width, output.height, output.depth);
 	// Set all of our cube locations
 	for (int i=0; i<list->size; i++) {
 		//printf("Setting %d %d %d\n", list->array[i].x, list->array[i].y, list->array[i].z);
@@ -119,7 +261,9 @@ int main(int argc, char *argv[])
 	struct CubeList list = {.size=0};
 	struct Space environment = processinput(in_file, &list);
 	// Solve part 1
-	printf("The total exposed surface area is %d\n", part1(environment, list));
+	printf("The total surface area is %d\n", part1(environment, list));
+	// Solve part 2
+	printf("The total exterior surface area is %d\n", part2(environment, list));
 
 	// Clean up memory
 	free(list.array);
