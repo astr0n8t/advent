@@ -91,7 +91,7 @@ long part2(MonkeyList monkeys) {
 	double l = solve(monkeys, monkeys.array[left]);
 	// Get the total of the right
 	double r = solve(monkeys, monkeys.array[right]);
-	// Get the difference froom the two sdes
+	// Get the difference froom the two sides
 	double diff = l - r;
 	// Set our stepped human value 
 	monkeys.array[hindex].val = 10000;
@@ -175,7 +175,7 @@ void processinput(char* filename, MonkeyList* monkeys) {
 
 int main(int argc, char *argv[])
 {
-	// Stavk ar
+	// Stack vars
 	MonkeyList monkeys = {.array=NULL,.size=0,.max=0};
 	// Get our monkey input
 	processinput("input.txt", &monkeys);
