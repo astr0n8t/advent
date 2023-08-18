@@ -57,17 +57,6 @@ void fill(PathGrid* path) {
 	return;
 }
 
-int dadd(int direction, int sum) {
-	direction += sum;
-	while (direction < 0) {
-		direction += 360;
-	}
-	while (direction >= 360) {
-		direction -= 360;
-	}
-	return direction;
-}
-
 Position forward(Position curr) {
 	switch(curr.d) {
 		case UP:
@@ -104,60 +93,194 @@ Position backward(Position curr) {
 	return curr;
 }
 
+Position walkcubeedge(PathGrid path, Position curr, int direction) {
+	curr = backward(curr);
+	// Hardcoded
+	static int map[4][3] = {
+		{0, 1, 2},
+		{0, 3, 0},
+		{4, 5, 0},
+		{6, 0, 0}};
+	int zone = map[curr.y/50][curr.x/50];
+	Position original = curr;
+	switch (zone) {
+		case 1:
+			if (direction == UP) {
+				curr.x = 0;
+				curr.y = original.x + 100;
+				curr.d = RIGHT;
 
-Position next(PathGrid path, int distance, Position curr) {
-	int wrap = 0;
-	int wallwrap = 0;
-	while (distance) {
-		if (wallwrap) {
-			curr = backward(curr);
-		}
-		else {
-			curr = forward(curr);
-		}
-		if (curr.x < 0) {
-			curr.x = path.width-2;
-		}
-		if (curr.y < 0) {
-			curr.y = path.height-1;
-		}
-		if (curr.y >= path.height) {
-			curr.y = 0;
-		}
-		if (curr.x >= path.width-1) {
-			curr.x = 0;
-		}
-		if (path.array[curr.y][curr.x] == '#') {
-			if (wrap) {
-				wallwrap = 1;
 			}
-			else {
-				curr = backward(curr);
-				distance = 0;
+			else if (direction == LEFT) {
+				curr.x = 0;
+				curr.y = 149-original.y;
+				curr.d = RIGHT;
 			}
+			break;
+		case 2:
+			if (direction == UP) {
+				curr.x = original.x-100;
+				curr.y = 199;
+				curr.d = UP;
+			}
+			else if (direction == DOWN) {
+				curr.x = 99;
+				curr.y = original.x - 50;
+				curr.d = LEFT;
+			}
+			else if (direction == RIGHT) {
+				curr.x = 99;
+				curr.y = 149-original.y;
+				curr.d = LEFT;
+			}
+			break;
+		case 3:
+			if (direction == LEFT) {
+				curr.x = original.y-50;
+				curr.y = 100;
+				curr.d = DOWN;
+			}
+			else if (direction == RIGHT) {
+				curr.x = original.y + 50;
+				curr.y = 49;
+				curr.d = UP;
+			}
+			break;
+		case 4:
+			if (direction == LEFT) {
+				curr.x = 50;
+				curr.y = 149 - original.y;
+				curr.d = RIGHT;
+			}
+			else if (direction == UP) {
+				curr.x = 50;
+				curr.y = original.x + 50;
+				curr.d = RIGHT;
+			}
+			break;
+		case 5:
+			if (direction == RIGHT) {
+				curr.x = 149;
+				curr.y = 149-original.y;
+				curr.d = LEFT;
+			}
+			else if (direction == DOWN) {
+				curr.x = 49;
+				curr.y = original.x + 100;
+				curr.d = LEFT;
+			}
+			break;
+		case 6:
+			if (direction == LEFT) {
+				curr.x = original.y - 100;
+				curr.y = 0;
+				curr.d = DOWN;
+			}
+			else if (direction == DOWN) {
+				curr.x = original.x + 100;
+				curr.y = 0;
+				curr.d = DOWN;
+			}
+			else if (direction == RIGHT) {
+				curr.x = original.y - 100;
+				curr.y = 149;
+				curr.d = UP;
+			}
+			break;
+	}
+
+	return curr;
+}
+
+Position cubewrap(PathGrid path, Position curr) {
+	int wrap = -1;
+	if (curr.x < 0) {
+		wrap = LEFT;
+	}
+	else if (curr.y < 0) {
+		wrap = UP;
+	}
+	else if (curr.y >= path.height) {
+		wrap = DOWN;
+	}
+	else if (curr.x >= path.width-1) {
+		wrap = RIGHT;
+	}
+	else if (path.array[curr.y][curr.x] == '0') {
+		if (curr.d == LEFT) {
+			wrap = LEFT;
 		}
-		else if (path.array[curr.y][curr.x] == '0') {
-			if (!wrap) {
-				wrap = 1;
-			}
+		else if (curr.d == UP) {
+			wrap = UP;
 		}
-		else {
-			if (wallwrap) {
-				distance = 0;
-			}
-			else {
-				wrap = 0;
-				distance--;
-			}
+		else if (curr.d == DOWN) {
+			wrap = DOWN;
 		}
-		printf("X: %d Y: %d D: %d\n", curr.x, curr.y, curr.d);
+		else if (curr.d == RIGHT) {
+			wrap = RIGHT;
+		}
+	}
+	if (wrap != -1) {
+		curr = walkcubeedge(path, curr, wrap);
 	}
 	return curr;
 }
 
+Position normalwrap(PathGrid path, Position curr) {
+	if (curr.x < 0) {
+		curr.x = path.width-2;
+	}
+	else if (curr.y < 0) {
+		curr.y = path.height-1;
+	}
+	else if (curr.y >= path.height) {
+		curr.y = 0;
+	}
+	else if (curr.x >= path.width-1) {
+		curr.x = 0;
+	}
+	else if (path.array[curr.y][curr.x] == '0') {
+		if (curr.d == LEFT) {
+			curr.x = path.width-2;
+		}
+		else if (curr.d == UP) {
+			curr.y = path.height-1;
+		}
+		else if (curr.d == DOWN) {
+			curr.y = 0;
+		}
+		else if (curr.d == RIGHT) {
+			curr.x = 0;
+		}
+	}
+	while (path.array[curr.y][curr.x] == '0') {
+		curr = forward(curr);
+	}
+	return curr;
+}
 
-Position solve(PathGrid path, MoveList moves) {
-	// Set up our starting point
+Position next(PathGrid path, int distance, Position curr, Position wrapfunc(PathGrid, Position)) {
+	Position original;
+	while (distance) {
+		curr = forward(curr);
+		original = curr;
+		curr = wrapfunc(path, curr);
+		if (path.array[curr.y][curr.x] == '#') {
+			if (curr.x != original.x || curr.y != original.y) {
+				curr = original;
+			}
+			curr = backward(curr);
+			distance = 0;
+		}
+		else {
+			distance--;
+		}
+	}
+	return curr;
+}
+
+int solve(PathGrid path, MoveList moves, Position wrapfunc(PathGrid, Position)) {
+	int answer = 0;
 	Position curr = {.x=0,.y=0,.d=RIGHT};
 	for (int i=0; i<path.width && !curr.x; i++) {
 		if (path.array[0][i] == '.') {
@@ -167,27 +290,23 @@ Position solve(PathGrid path, MoveList moves) {
 	for (int i=0; i<moves.size; i++) {
 		switch (moves.array[i].direction) {
 			case 'R':
-				curr.d = dadd(curr.d, 90);
+				curr.d += 90;
 				break;
 			case 'L':
-				curr.d = dadd(curr.d, -90);
+				curr.d -= 90;
 				break;
 		}
+		while (curr.d < 0) {
+			curr.d += 360;
+		}
+		while (curr.d >= 360) {
+			curr.d -= 360;
+		}
 
-		curr = next(path, moves.array[i].distance, curr);
+		curr = next(path, moves.array[i].distance, curr, wrapfunc);
 	}
-
-	return curr;
-}
-
-
-// Solve part1
-int part1(PathGrid path, MoveList moves) {
-	int answer = 0;
-	Position final = solve(path, moves);
-	printf("X: %d Y: %d D: %d\n", final.x, final.y, final.d);
-	answer = 1000*(final.y+1) + 4*(final.x+1);
-	switch (final.d) {
+	answer = 1000*(curr.y+1) + 4*(curr.x+1);
+	switch (curr.d) {
 		case DOWN:
 			answer += 1;
 			break;
@@ -198,13 +317,17 @@ int part1(PathGrid path, MoveList moves) {
 			answer += 3;
 			break;
 	}
-
 	return answer;
 }
 
+// Solve part1
+int part1(PathGrid path, MoveList moves) {
+	return solve(path, moves, normalwrap);
+}
+
 // Solve part2
-long part2() {
-	return 0;
+int part2(PathGrid path, MoveList moves) {
+	return solve(path, moves, cubewrap);
 }
 
 // Processes the selected input file and stores the result in the 
@@ -289,6 +412,7 @@ int main(int argc, char *argv[])
 	// Stack vars
 	MoveList moves = {.size=0, .max=0, .array=NULL};
 	PathGrid path = {.width=0, .height=0, .array=NULL};
+	PathGrid cube = {.width=0, .height=0, .array=NULL};
 	// Get our monkey input
 	processinput("input.txt", &path, &moves);
 	fill(&path);
@@ -296,11 +420,12 @@ int main(int argc, char *argv[])
 	// Solve part1
 	printf("The password for part1 is %d\n", part1(path, moves));
 	// Solve part2
-	printf("The value for humn should be %ld\n", part2());
+	printf("The password for part2 is %d\n", part2(path, moves));
 
 	// Free our memory
 	free(moves.array);
 	free(path.array);
+	free(cube.array);
 
 	return EXIT_SUCCESS;
 }
