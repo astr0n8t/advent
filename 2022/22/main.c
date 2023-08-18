@@ -52,7 +52,7 @@ void fill(PathGrid* path) {
 }
 
 // Moves the position forward in the
-//odirection its moving
+// direction its moving
 Position forward(Position curr) {
 	switch(curr.d) {
 		case UP:
@@ -344,7 +344,7 @@ int solve(PathGrid path, MoveList moves, Position wrapfunc(PathGrid, Position)) 
 				curr.d -= 90;
 				break;
 		}
-		// Keep our answer to one of the values
+		// Keep our direction to one of the four values
 		while (curr.d < 0) {
 			curr.d += 360;
 		}
@@ -352,7 +352,7 @@ int solve(PathGrid path, MoveList moves, Position wrapfunc(PathGrid, Position)) 
 			curr.d -= 360;
 		}
 
-		// Calculat the position after this move
+		// Calculate the position after this move
 		curr = next(path, moves.array[i].distance, curr, wrapfunc);
 	}
 	// Calculate our answer without the direction
@@ -386,6 +386,7 @@ int part2(PathGrid path, MoveList moves) {
 }
 
 // Processes the selected input file and stores the result in the 
+// given PathGrid and MoveList
 void processinput(char* filename, PathGrid* path, MoveList* moves) {
 	// Read in our file
 	FILE *in_file = fopen(filename, "r");
@@ -394,12 +395,12 @@ void processinput(char* filename, PathGrid* path, MoveList* moves) {
 		exit(EXIT_FAILURE);
 	}
 
-	// Stack var
+	// Stack vars
 	char buffer[500];
 	size_t tmp = 0;
 	int curr = 0;
 
-	// Figure out how many monkeys there are
+	// Figure out the dimensions of the path
 	while(fgets(buffer, sizeof buffer, in_file) != NULL) {
 		// End on first newline
 		if (buffer[0] == '\n') {
@@ -431,6 +432,7 @@ void processinput(char* filename, PathGrid* path, MoveList* moves) {
 		}
 		// Copy the buffer into the array
 		strncpy(path->array[curr], buffer, path->width-1);
+		// Terminate the string on the first newline
 		for (int i=0; i<path->width; i++) {
 			if (path->array[curr][i] == '\n') {
 				path->array[curr][i] = 0;
