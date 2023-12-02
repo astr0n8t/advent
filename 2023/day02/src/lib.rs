@@ -81,7 +81,7 @@ impl Round {
     }
 }
 
-// Parses the format "0 color"
+// Parses the format "0 color, 0 color, 0 color"
 impl FromStr for Round {
     type Err = RoundError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
