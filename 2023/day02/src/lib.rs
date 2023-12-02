@@ -124,14 +124,14 @@ pub fn part1(input_file: &str) -> u32 {
         blue: 14,
     };
     parse_input(input_file)
-        .into_iter()
+        .iter()
         .map(|x| if x.possible(&minimums) { x.id } else { 0 })
         .sum()
 }
 
 pub fn part2(input_file: &str) -> u32 {
     parse_input(input_file)
-        .into_iter()
+        .iter()
         .map(|x| x.power())
         .sum()
 }
