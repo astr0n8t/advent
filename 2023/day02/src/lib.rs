@@ -1,4 +1,5 @@
 use std::fs;
+use std::cmp;
 
 #[derive(Clone, Default, Debug)]
 struct Game {
@@ -8,12 +9,21 @@ struct Game {
 
 impl Game {
     pub fn possible(self: &Game, source: &Round) -> bool {
-        for round in self.rounds.clone() {
+        for round in &self.rounds {
             if !round.possible(source) {
                 return false;
             }
         }
         true
+    }
+    pub fn power(self: &Game) -> u32 {
+        let mut max = Round::default();
+        for round in &self.rounds {
+            max.red = cmp::max(max.red, round.red);
+            max.green = cmp::max(max.green, round.green);
+            max.blue = cmp::max(max.blue, round.blue);
+        }
+        max.red*max.green*max.blue
     }
 }
 
@@ -35,24 +45,27 @@ impl Round {
     }
 }
 
-pub fn part1(input_file: &str) -> u64 {
+pub fn part1(input_file: &str) -> u32 {
     let minimums = Round {
         red: 12,
         green: 13,
         blue: 14,
     };
-    let mut sum: u64 = 0;
+    let mut sum: u32 = 0;
     for item in parse_input(input_file) {
         if item.possible(&minimums) {
-            sum += u64::from(item.id);
+            sum += item.id;
         }
     }
     sum
 }
 
-pub fn part2(input_file: &str) -> u64 {
-    println!("Opening {}", input_file);
-    0
+pub fn part2(input_file: &str) -> u32 {
+    let mut sum = 0;
+    for item in parse_input(input_file) {
+        sum += item.power();
+    }
+    sum
 }
 
 
@@ -115,11 +128,11 @@ mod tests {
 
     #[test]
     fn test1() {
-        assert_eq!(part1("data/test1.txt"), 8);
+        assert_eq!(part1("data/test.txt"), 8);
     }
 
     #[test]
     fn test2() {
-        assert_eq!(part2("data/test2.txt"), 0);
+        assert_eq!(part2("data/test.txt"), 2286);
     }
 }
