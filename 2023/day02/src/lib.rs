@@ -9,12 +9,8 @@ struct Game {
 
 impl Game {
     pub fn possible(self: &Game, source: &Round) -> bool {
-        for round in &self.rounds {
-            if !round.possible(source) {
-                return false;
-            }
-        }
-        true
+        self.rounds.iter()
+            .all(|x| x.possible(source))
     }
     pub fn power(self: &Game) -> u32 {
         let mut max = Round::default();
@@ -36,12 +32,9 @@ struct Round {
 
 impl Round {
     pub fn possible(self: &Round, source: &Round) -> bool {
-        if self.red <= source.red &&
-            self.green <= source.green &&
-            self.blue <= source.blue {
-                return true;
-        }
-        false
+        self.red <= source.red &&
+        self.green <= source.green &&
+        self.blue <= source.blue
     }
 }
 
@@ -51,21 +44,17 @@ pub fn part1(input_file: &str) -> u32 {
         green: 13,
         blue: 14,
     };
-    let mut sum: u32 = 0;
-    for item in parse_input(input_file) {
-        if item.possible(&minimums) {
-            sum += item.id;
-        }
-    }
-    sum
+    parse_input(input_file)
+        .into_iter()
+        .map(|x| if x.possible(&minimums) { x.id } else { 0 })
+        .sum()
 }
 
 pub fn part2(input_file: &str) -> u32 {
-    let mut sum = 0;
-    for item in parse_input(input_file) {
-        sum += item.power();
-    }
-    sum
+    parse_input(input_file)
+        .into_iter()
+        .map(|x| x.power())
+        .sum()
 }
 
 
@@ -73,35 +62,46 @@ fn parse_input(input_file: &str) -> Vec<Game> {
     let mut games: Vec<Game> = vec![];
     let input = fs::read_to_string(input_file)
         .expect("Something went wrong reading the file");
-    let input = input.split("\n");
 
-    for line in input {
-        if line.len() <= 1 {
-            continue
+    // Iterate over the games
+    for line in input.split("\n") {
+        // Make sure this line contains a game
+        if !line.contains("Game") {
+            continue;
         }
         let mut game: Game = Game::default();
 
-        let mut split_line = line.split(":");
-        game.id = split_line.next()
-            .expect("Error processing line")
+        let mut line = line.split(":");
+        // Capture the game id from line format "Game 1: <content>"
+        game.id = line.next()
+            .unwrap()
             .split(" ")
             .last()
-            .expect("Error processing line")
+            .unwrap()
             .parse::<u32>()
             .unwrap();
-        let split_game = split_line.next()
-            .expect("Error processing line")
-            .split(";");
+        // Redefine line to be everything after "Game 1:"
+        let line = line.next()
+            .unwrap();
 
-        for item in split_game {
+        // Iterate over every round
+        for item in line.split(";") {
+            // Create our round
             let mut round: Round = Round::default();
+            // Iterate over every color in the round
             for color in item.split(",") {
-                let mut split_color = color.trim().split(" ");
-                let quantity = split_color.next()
-                    .expect("Error processing line")
+                // Redefine color to be an iterator of the color and quantity
+                let mut color = color.trim().split(" ");
+                // Set the quantity from format "1 red"
+                let quantity = color.next()
+                    .unwrap()
                     .parse::<u32>()
                     .unwrap();
-                match split_color.last().expect("Color should exist") {
+                // Set the color to actually be the color
+                let color = color.last()
+                    .unwrap();
+                // Match appropriately to set the right quantity
+                match color {
                     "blue" => {
                         round.blue = quantity;
                     },
@@ -111,13 +111,13 @@ fn parse_input(input_file: &str) -> Vec<Game> {
                     "green" => {
                         round.green = quantity;
                     },
-                    &_ => ()
+                    _ => ()
 
                 }
             }
             game.rounds.push(round);
         }
-        games.push(game.clone());
+        games.push(game);
     }
     games
 }
