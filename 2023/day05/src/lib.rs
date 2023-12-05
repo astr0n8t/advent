@@ -13,8 +13,21 @@ pub fn part1(input_file: &str) -> u64 {
         }).min().unwrap().clone()
 }
 
-pub fn part2(input_file: &str) -> u32 {
-    0
+pub fn part2(input_file: &str) -> u64 {
+    let mut min = 999999999999999;
+    let (ranges, map) = parse_input(input_file);
+    for x in (0..ranges.len()).step_by(2) {
+        for val in ranges[x]..=ranges[x]+ranges[x+1] {
+            let mut v = val;
+            for m in map.iter() {
+                v = m.translate(v);
+            }
+            if v < min {
+                min = v;
+            }
+        }
+    }
+    min
 }
 
 
@@ -132,6 +145,6 @@ mod tests {
 
     #[test]
     fn test2() {
-        assert_eq!(part2("data/test.txt"), 0);
+        assert_eq!(part2("data/test.txt"), 46);
     }
 }
