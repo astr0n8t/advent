@@ -1,0 +1,116 @@
+use std::str::FromStr;
+use std::fs;
+
+
+pub fn part1(input_file: &str) -> u32 {
+    let (seeds, map) = parse_input(input_file);
+    dbg!(seeds);
+    dbg!(map);
+    0
+}
+
+pub fn part2(input_file: &str) -> u32 {
+    0
+}
+
+
+#[derive(Debug)]
+struct OffsetMap {
+    pub offsets: Vec<Offset>, 
+}
+#[derive(Debug)]
+struct OffsetMapError;
+
+impl OffsetMap {
+    pub fn new() -> Self {
+        Self { offsets: vec![] }
+    }
+}
+impl FromStr for OffsetMap {
+    type Err = OffsetMapError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut map = OffsetMap::new();
+        let s = String::from_str(s)
+            .unwrap();
+        for line in s.split("\n") {
+            map.offsets.push(
+                Offset::from_str(line)
+                .unwrap()
+                );
+        }
+        Ok(map)
+    }
+}
+
+#[derive(Debug)]
+struct Offset {
+    pub destination: u64,
+    pub source: u64,
+    pub range: u64,
+}
+#[derive(Debug)]
+struct OffsetError;
+
+impl Offset {
+    pub fn new() -> Self {
+        Self { destination: 0, source: 0, range: 0 }
+    }
+}
+
+impl FromStr for Offset {
+    type Err = OffsetError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let s = String::from_str(s)
+            .unwrap();
+        let mut s = s.trim()
+            .split_whitespace();
+        let mut offset = Offset::new();
+        offset.destination = s.next()
+            .unwrap().parse::<u64>().unwrap();
+        offset.source = s.next()
+            .unwrap().parse::<u64>().unwrap();
+        offset.range = s.next()
+            .unwrap().parse::<u64>().unwrap();
+        Ok(offset)
+    }
+}
+
+fn parse_input(input_file: &str) -> (Vec<u64>, Vec<OffsetMap>) {
+    let mut map: Vec<OffsetMap> = vec![];
+    let mut seeds: Vec<u64> = vec![];
+
+    let input = fs::read_to_string(input_file)
+        .expect("Something went wrong reading the file");
+    let (top, rest) = input.split_once("\n").unwrap();
+    let top = top.strip_prefix("seeds: ").unwrap();
+
+    for seed in top.split_whitespace() {
+        seeds.push(
+            seed.parse::<u64>().unwrap()
+            );
+    }
+
+    for block in rest.trim().split("\n\n") {
+        let (_, block) = block.split_once("\n").unwrap();
+        map.push(
+            OffsetMap::from_str(block)
+                .unwrap()
+            );
+    }
+    (seeds, map)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test1() {
+        assert_eq!(part1("data/test.txt"), 35);
+    }
+
+    #[test]
+    fn test2() {
+        assert_eq!(part2("data/test.txt"), 0);
+    }
+}
