@@ -14,17 +14,21 @@ pub fn part1(input_file: &str) -> u64 {
 }
 
 pub fn part2(input_file: &str) -> u64 {
-    let mut min = 999999999999999;
+    let mut min = 0;
+    let mut found = false;
     let (ranges, map) = parse_input(input_file);
-    for x in (0..ranges.len()).step_by(2) {
-        for val in ranges[x]..=ranges[x]+ranges[x+1] {
-            let mut v = val;
-            for m in map.iter() {
-                v = m.translate(v);
+    while !found {
+        let mut candidate = min;
+        for m in map.iter().rev() {
+            candidate = m.translate_rev(candidate);
+        }
+        for x in (0..ranges.len()).step_by(2) {
+            if (ranges[x]..=ranges[x]+ranges[x+1]).contains(&candidate) {
+                found = true;
             }
-            if v < min {
-                min = v;
-            }
+        }
+        if !found {
+            min += 1
         }
     }
     min
@@ -50,6 +54,17 @@ impl OffsetMap {
             return offset.next()
                 .unwrap()
                 .translate(src);
+        }
+        src
+    }
+    pub fn translate_rev(self: &OffsetMap, src: u64) -> u64 {
+        let mut offset = self.offsets.iter()
+            .filter(|x| x.contains_rev(src))
+            .peekable();
+        if offset.peek().is_some() { 
+            return offset.next()
+                .unwrap()
+                .translate_rev(src);
         }
         src
     }
@@ -88,6 +103,12 @@ impl Offset {
     }
     pub fn translate(self: &Offset, src: u64) -> u64 {
         (src - self.source) + self.destination
+    }
+    pub fn contains_rev(self: &Offset, src: u64) -> bool {
+        src >= self.destination && src < self.destination + self.range
+    }
+    pub fn translate_rev(self: &Offset, src: u64) -> u64 {
+        (src - self.destination) + self.source
     }
 }
 
