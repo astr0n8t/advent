@@ -2,11 +2,15 @@ use std::str::FromStr;
 use std::fs;
 
 
-pub fn part1(input_file: &str) -> u32 {
+pub fn part1(input_file: &str) -> u64 {
     let (seeds, map) = parse_input(input_file);
-    dbg!(seeds);
-    dbg!(map);
-    0
+    seeds.iter().map(|x| {
+        let mut v = *x;
+        for m in map.iter() {
+            v = m.translate(v);
+        }
+        v
+        }).min().unwrap().clone()
 }
 
 pub fn part2(input_file: &str) -> u32 {
@@ -24,6 +28,17 @@ struct OffsetMapError;
 impl OffsetMap {
     pub fn new() -> Self {
         Self { offsets: vec![] }
+    }
+    pub fn translate(self: &OffsetMap, src: u64) -> u64 {
+        let mut offset = self.offsets.iter()
+            .filter(|x| x.contains(src))
+            .peekable();
+        if offset.peek().is_some() { 
+            return offset.next()
+                .unwrap()
+                .translate(src);
+        }
+        src
     }
 }
 impl FromStr for OffsetMap {
@@ -54,6 +69,12 @@ struct OffsetError;
 impl Offset {
     pub fn new() -> Self {
         Self { destination: 0, source: 0, range: 0 }
+    }
+    pub fn contains(self: &Offset, src: u64) -> bool {
+        src >= self.source && src < self.source + self.range
+    }
+    pub fn translate(self: &Offset, src: u64) -> u64 {
+        (src - self.source) + self.destination
     }
 }
 
