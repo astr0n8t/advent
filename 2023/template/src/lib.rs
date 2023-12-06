@@ -1,8 +1,8 @@
-pub fn part1(input_file: &str) -> u32 {
+pub fn part1(input_file: &str) -> usize {
     0
 }
 
-pub fn part2(input_file: &str) -> u32 {
+pub fn part2(input_file: &str) -> usize {
     0
 }
 
