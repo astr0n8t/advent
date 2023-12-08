@@ -2,11 +2,27 @@ use std::collections::HashMap;
 use std::fs;
 
 pub fn part1(input_file: &str) -> usize {
-    parse_input(input_file).navigate()
+    parse_input(input_file).navigate(String::from("AAA"), true).0
 }
 
 pub fn part2(input_file: &str) -> usize {
-    0
+    let map = parse_input(input_file);
+    let cycle_length = map.instructions.len();
+    let mut nodes: Vec<String> = vec![];
+
+    for (node, _) in &map.node_lookup {
+        if node.chars().last() == Some('A') {
+            nodes.push(node.clone());
+        }
+    }
+
+    let mut cycles = 1;
+    nodes.iter().for_each(|x| {
+        let (_, y) = map.navigate(x.clone(), false);
+        cycles *= y;
+    });
+
+    cycle_length*cycles
 }
 
 #[derive(Debug)]
@@ -25,23 +41,34 @@ struct Node {
 struct Maze {
     node_lookup: HashMap<String,Node>,
     instructions: Vec<Direction>,
-    current_node: String,
 }
 
 impl Maze {
-    fn navigate(&mut self) -> usize {
+    fn navigate(&self, start: String, strict: bool) -> (usize, usize) {
+        let mut current_node = &start;
+        
+        let mut num_cycles = 0;
         let mut num_steps = 0;
-        for dir in self.instructions.iter().cycle() {
-            self.current_node = match dir {
-                Direction::Left => self.node_lookup[&self.current_node].left.clone(),
-                Direction::Right => self.node_lookup[&self.current_node].right.clone(),
-            };
-            num_steps += 1;
-            if self.current_node == "ZZZ" {
-                break;
+        while !self.at_end(current_node, strict) {
+            for dir in self.instructions.iter() {
+                current_node = match dir {
+                    Direction::Left => &self.node_lookup[current_node].left,
+                    Direction::Right => &self.node_lookup[current_node].right,
+                };
+                num_steps += 1;
+                if strict && self.at_end(current_node, strict) {
+                    break;
+                }
             }
+            num_cycles += 1
         }
-        num_steps
+        (num_steps, num_cycles)
+    }
+    fn at_end(&self, current_node: &String, strict: bool) -> bool {
+        if strict {
+            return current_node == "ZZZ";
+        }
+        current_node.chars().last() == Some('Z')
     }
 }
 
@@ -54,7 +81,6 @@ fn parse_input(input_file: &str) -> Maze {
     let mut maze: Maze = Maze {
         node_lookup: HashMap::with_capacity(nodes.matches("\n").count()),
         instructions: Vec::with_capacity(directions.chars().count()),
-        current_node: String::from("AAA"),
     };
     for d in directions.chars() {
         match d {
@@ -90,6 +116,6 @@ mod tests {
 
     #[test]
     fn test2() {
-        assert_eq!(part2("data/test.txt"), 0);
+        assert_eq!(part2("data/test2.txt"), 6);
     }
 }
