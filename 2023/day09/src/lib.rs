@@ -6,7 +6,7 @@ pub fn part1(input_file: &str) -> i64 {
 }
 
 pub fn part2(input_file: &str) -> i64 {
-    0
+    parse_input(input_file).iter_mut().map(|x| x.prev()).sum()
 }
 
 #[derive(Debug)]
@@ -25,7 +25,9 @@ impl Sequence {
         }
     }
     fn next(&mut self) -> i64 {
-        self.calculate_pyramid();
+        if self.next_seq.is_none() && !self.pyramid_end() {
+            self.calculate_pyramid();
+        }
 
         let mut x = 0;
 
@@ -35,6 +37,20 @@ impl Sequence {
             }
         }
         self.seq.iter().last().unwrap() + x
+    }
+    fn prev(&mut self) -> i64 {
+        if self.next_seq.is_none() && !self.pyramid_end() {
+            self.calculate_pyramid();
+        }
+
+        let mut x = 0;
+
+        if !self.pyramid_end() {
+            if let Some(ref mut seq) = self.next_seq {
+                x = seq.prev();
+            }
+        }
+        self.seq.iter().next().unwrap() - x
     }
     fn calculate_pyramid(&mut self) {
         let mut next_seq = Box::new(Sequence::new(self.seq.len()-1));
@@ -93,6 +109,6 @@ mod tests {
 
     #[test]
     fn test2() {
-        assert_eq!(part2("data/test.txt"), 0);
+        assert_eq!(part2("data/test.txt"), 2);
     }
 }
