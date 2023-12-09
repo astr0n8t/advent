@@ -1,3 +1,5 @@
+use std::fs;
+
 pub fn part1(input_file: &str) -> usize {
     0
 }
@@ -8,6 +10,8 @@ pub fn part2(input_file: &str) -> usize {
 
 
 fn parse_input(input_file: &str) -> bool {
+    let input = fs::read_to_string(input_file)
+        .expect("Unable to open input data");
     false
 }
 
