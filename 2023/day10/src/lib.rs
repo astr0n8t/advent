@@ -1,4 +1,6 @@
 use std::fs;
+use std::io;
+use std::io::Write;
 use std::str::FromStr;
 use std::boxed::Box;
 
@@ -7,7 +9,10 @@ pub fn part1(input_file: &str) -> usize {
 }
 
 pub fn part2(input_file: &str) -> usize {
-    0
+    let mut maze = parse_input(input_file);
+    maze.expand();
+    maze.flood();
+    maze.calculate_inner()
 }
 
 #[derive(Copy,Clone,Debug,PartialEq)]
@@ -19,6 +24,7 @@ enum PipeKinds {
     SouthWest,
     SouthEast,
     Ground,
+    GroundOuter,
     Start,
 }
 
@@ -114,9 +120,6 @@ impl Maze {
         if pos.x >= self.width && pos.y >= self.height {
             Err("Array indexes out of bounds")?;
         }
-        if self.maze[pos.y][pos.x].kind == PipeKinds::Ground {
-            Err("Cannot enter ground")?;
-        }
         if !self.maze[pos.y][pos.x].is_valid(pos.dir) {
             Err("Cannot enter pipe from this direction")?;
         }
@@ -178,7 +181,150 @@ impl Maze {
                 }
             }
         }
+    }
 
+    fn expand(&mut self) {
+        let mut new_maze: Vec<Vec<Pipe>> = Vec::with_capacity(self.height*3);
+        for y in 0..self.height {
+            for _ in 0..3 {
+                new_maze.push(Vec::with_capacity(self.width*3));
+            }
+            for x in 0..self.width {
+                new_maze[y*3].push(Pipe{kind:PipeKinds::Ground,distance:0});
+                new_maze[y*3+2].push(Pipe{kind:PipeKinds::Ground,distance:0});
+                match self.maze[y][x].kind {
+                    PipeKinds::Vertical => {
+                        new_maze[y*3+1].push(Pipe{kind:PipeKinds::Ground,distance:0});
+                        new_maze[y*3].push(Pipe{kind:PipeKinds::Vertical,distance:0});
+                        new_maze[y*3+1].push(Pipe{kind:PipeKinds::Vertical,distance:0});
+                        new_maze[y*3+2].push(Pipe{kind:PipeKinds::Vertical,distance:0});
+                        new_maze[y*3+1].push(Pipe{kind:PipeKinds::Ground,distance:0});
+                    }
+                    PipeKinds::Horizontal => {
+                        new_maze[y*3+1].push(Pipe{kind:PipeKinds::Horizontal,distance:0});
+                        new_maze[y*3].push(Pipe{kind:PipeKinds::Ground,distance:0});
+                        new_maze[y*3+1].push(Pipe{kind:PipeKinds::Horizontal,distance:0});
+                        new_maze[y*3+2].push(Pipe{kind:PipeKinds::Ground,distance:0});
+                        new_maze[y*3+1].push(Pipe{kind:PipeKinds::Horizontal,distance:0});
+                    }
+                    PipeKinds::NorthEast => {
+                        new_maze[y*3+1].push(Pipe{kind:PipeKinds::Ground,distance:0});
+                        new_maze[y*3].push(Pipe{kind:PipeKinds::Vertical,distance:0});
+                        new_maze[y*3+1].push(Pipe{kind:PipeKinds::NorthEast,distance:0});
+                        new_maze[y*3+2].push(Pipe{kind:PipeKinds::Ground,distance:0});
+                        new_maze[y*3+1].push(Pipe{kind:PipeKinds::Horizontal,distance:0});
+                    },
+                    PipeKinds::NorthWest => {
+                        new_maze[y*3+1].push(Pipe{kind:PipeKinds::Horizontal,distance:0});
+                        new_maze[y*3].push(Pipe{kind:PipeKinds::Vertical,distance:0});
+                        new_maze[y*3+1].push(Pipe{kind:PipeKinds::NorthWest,distance:0});
+                        new_maze[y*3+2].push(Pipe{kind:PipeKinds::Ground,distance:0});
+                        new_maze[y*3+1].push(Pipe{kind:PipeKinds::Ground,distance:0});
+                    },
+                    PipeKinds::SouthWest => {
+                        new_maze[y*3+1].push(Pipe{kind:PipeKinds::Horizontal,distance:0});
+                        new_maze[y*3].push(Pipe{kind:PipeKinds::Ground,distance:0});
+                        new_maze[y*3+1].push(Pipe{kind:PipeKinds::SouthWest,distance:0});
+                        new_maze[y*3+2].push(Pipe{kind:PipeKinds::Vertical,distance:0});
+                        new_maze[y*3+1].push(Pipe{kind:PipeKinds::Ground,distance:0});
+                    },
+                    PipeKinds::SouthEast => {
+                        new_maze[y*3+1].push(Pipe{kind:PipeKinds::Ground,distance:0});
+                        new_maze[y*3].push(Pipe{kind:PipeKinds::Ground,distance:0});
+                        new_maze[y*3+1].push(Pipe{kind:PipeKinds::SouthEast,distance:0});
+                        new_maze[y*3+2].push(Pipe{kind:PipeKinds::Vertical,distance:0});
+                        new_maze[y*3+1].push(Pipe{kind:PipeKinds::Horizontal,distance:0});
+                    },
+                    PipeKinds::Ground => {
+                        new_maze[y*3+1].push(Pipe{kind:PipeKinds::Ground,distance:0});
+                        new_maze[y*3].push(Pipe{kind:PipeKinds::Ground,distance:0});
+                        new_maze[y*3+1].push(Pipe{kind:PipeKinds::Ground,distance:0});
+                        new_maze[y*3+2].push(Pipe{kind:PipeKinds::Ground,distance:0});
+                        new_maze[y*3+1].push(Pipe{kind:PipeKinds::Ground,distance:0});
+                    },
+                    PipeKinds::Start => {
+                        new_maze[y*3+1].push(Pipe{kind:PipeKinds::Horizontal,distance:0});
+                        new_maze[y*3].push(Pipe{kind:PipeKinds::Vertical,distance:0});
+                        new_maze[y*3+1].push(Pipe{kind:PipeKinds::Start,distance:0});
+                        new_maze[y*3+2].push(Pipe{kind:PipeKinds::Vertical,distance:0});
+                        new_maze[y*3+1].push(Pipe{kind:PipeKinds::Horizontal,distance:0});
+                    },
+                    _ => unreachable!(),
+                }
+                new_maze[y*3].push(Pipe{kind:PipeKinds::Ground,distance:0});
+                new_maze[y*3+2].push(Pipe{kind:PipeKinds::Ground,distance:0});
+            }
+        }
+        self.maze = new_maze;
+        self.width *= 3;
+        self.height *= 3;
+    }
+
+
+    fn is_outside(&self, x: usize, y: usize) -> bool {
+        if x == 0 || y == 0 || x + 1 == self.width || y + 1 == self.height {
+            return true;
+        }
+
+        if self.maze[y][x-1].kind == PipeKinds::GroundOuter ||
+            self.maze[y][x+1].kind == PipeKinds::GroundOuter ||
+            self.maze[y-1][x].kind == PipeKinds::GroundOuter ||
+            self.maze[y+1][x].kind == PipeKinds::GroundOuter {
+                return true;
+        }
+        return false;
+    }
+
+    fn flood(&mut self) {
+        for _ in 0..self.width {
+            for y in 0..self.height {
+                for x in 0..self.width {
+                    if self.maze[y][x].kind == PipeKinds::Ground && self.is_outside(x,y) {
+                        self.maze[y][x].kind = PipeKinds::GroundOuter;
+                    }
+                }
+            }
+        }
+    }
+
+    fn calculate_inner(&self) -> usize {
+        let mut total = 0;
+
+        for y in 0..(self.height/3) {
+            for x in 0..(self.width/3) {
+                if self.maze[(y*3)+1][(x*3)+1].kind == PipeKinds::Ground || 
+                (self.maze[y*3][x*3].kind == PipeKinds::Ground && 
+                 self.maze[(y*3)+2][x*3].kind == PipeKinds::Ground &&
+                 self.maze[y*3][(x*3)+2].kind == PipeKinds::Ground &&
+                 self.maze[(y*3)+2][(x*3)+2].kind == PipeKinds::Ground) {
+                    total += 1;
+                }
+
+            }
+        }
+        total
+    }
+
+    fn print(&self) {
+        for y in 0..self.height {
+            for x in 0..self.width {
+                let out = match self.maze[y][x].kind {
+                    PipeKinds::Vertical => '|',
+                    PipeKinds::Horizontal => '-',
+                    PipeKinds::NorthEast => 'L',
+                    PipeKinds::NorthWest => 'J',
+                    PipeKinds::SouthWest => '7',
+                    PipeKinds::SouthEast => 'F',
+                    PipeKinds::Start => 'S',
+                    PipeKinds::GroundOuter => 'O',
+                    _ => '.',
+                };
+
+                print!("{}", out);
+            }
+            print!("\n");
+            io::stdout().flush().unwrap();
+        }
     }
 }
 
@@ -254,6 +400,8 @@ mod tests {
 
     #[test]
     fn test2() {
-        assert_eq!(part2("data/test.txt"), 0);
+        assert_eq!(part2("data/test2.txt"), 4);
+        assert_eq!(part2("data/test3.txt"), 8);
+        assert_eq!(part2("data/test4.txt"), 10);
     }
 }
