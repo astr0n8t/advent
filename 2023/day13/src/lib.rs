@@ -1,14 +1,17 @@
 use std::fs;
+use std::cmp;
 use std::str::FromStr;
 
 pub fn part1(input_file: &str) -> usize {
     parse_input(input_file).iter().map(|x|{
-        x.find_line_of_reflection()
+        x.find_line_of_reflection(0)
     }).sum()
 }
 
 pub fn part2(input_file: &str) -> usize {
-    0
+    parse_input(input_file).iter().map(|x|{
+        x.find_line_of_reflection(1)
+    }).sum()
 }
 
 #[derive(Debug)]
@@ -27,34 +30,76 @@ impl Pattern {
         }
     }
 
-    fn find_line_of_reflection(&self) -> usize {
+    fn num_different(a: &str, b: &str) -> usize {
+        let mut num = 0;
+        let a = a.chars().collect::<Vec<char>>();
+        let b = b.chars().collect::<Vec<char>>();
+
+        for x in 0..a.len() {
+            if a[x] != b[x] {
+                num += 1;
+            }
+        }
+        num
+    }
+
+    fn check_vertical(&self, threshold: usize) -> Option<usize> {
         for i in 0..(self.vertical.len()-1) {
-            if self.vertical[i] == self.vertical[i+1] {
+            if Self::num_different(&self.vertical[i], &self.vertical[i+1]) < threshold + 1 {
                 let mut left: i32 = i as i32;
                 let mut right: i32 = (i + 1) as i32;
-                while self.vertical[left as usize] == self.vertical[right as usize]{
+                let mut diff = Self::num_different(&self.vertical[left as usize], &self.vertical[right as usize]);
+                while diff < threshold + 1 {
                     left -= 1;
                     right += 1;
                     if left < 0 || right as usize > self.vertical.len()-1 {
-                        return i+1;
+                        if diff == threshold {
+                            return Some(i+1);
+                        } else {
+                            break;
+                        }
                     }
+                    diff += Self::num_different(&self.vertical[left as usize], &self.vertical[right as usize]);
                 }
             }
         }
+        None
+    }
+
+    fn check_horizontal(&self, threshold: usize) -> Option<usize> {
         for i in 0..(self.horizontal.len()-1) {
-            if self.horizontal[i] == self.horizontal[i+1] {
+            if Self::num_different(&self.horizontal[i], &self.horizontal[i+1]) < threshold + 1 {
                 let mut left: i32 = i as i32;
                 let mut right: i32 = (i + 1) as i32;
-                while self.horizontal[left as usize] == self.horizontal[right as usize]{
+                let mut diff = Self::num_different(&self.horizontal[left as usize], &self.horizontal[right as usize]);
+                while diff < threshold + 1 {
                     left -= 1;
                     right += 1;
                     if left < 0 || right as usize > self.horizontal.len()-1 {
-                        return (i+1)*100;
+                        if diff == threshold {
+                            return Some((i+1)*100);
+                        } else {
+                            break;
+                        }
                     }
+                    diff += Self::num_different(&self.horizontal[left as usize], &self.horizontal[right as usize]);
                 }
             }
         }
-        unreachable!();
+        None
+    }
+
+    fn find_line_of_reflection(&self, threshold: usize) -> usize {
+        cmp::max(
+            match self.check_vertical(threshold) {
+                None => 0,
+                Some(x) => x,
+            },
+            match self.check_horizontal(threshold) {
+                None => 0,
+                Some(x) => x,
+            }
+        )
     }
 }
 
@@ -105,6 +150,6 @@ mod tests {
 
     #[test]
     fn test2() {
-        assert_eq!(part2("data/test.txt"), 0);
+        assert_eq!(part2("data/test.txt"), 400);
     }
 }
