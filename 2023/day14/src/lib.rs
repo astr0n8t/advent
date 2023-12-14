@@ -1,37 +1,136 @@
 use std::fs;
 use std::collections::HashMap;
+use std::collections::hash_map::DefaultHasher;
+use std::hash::{Hash, Hasher};
 
 pub fn part1(input_file: &str) -> usize {
-    let input = parse_input(input_file);
+    let mut input = parse_input(input_file);
+    cycle(&mut input, 0);
+    load(&input)
+}
 
-    let mut anchors: HashMap<(usize,usize),usize> = HashMap::new(); 
-    for x in 0..input[0].len() {
-        let mut curr = (x,0);
-        for y in 0..input.len() {
-            match input[y][x] {
-                '#' => {
-                    curr = (x,y+1);
-                },
+pub fn part2(input_file: &str) -> usize {
+    let mut input = parse_input(input_file);
+    let mut history: HashMap<u64,usize> = HashMap::new();
+    let mut num: usize = 0;
+    while !history.contains_key(&calculate_hash(&input)) {
+        history.insert(calculate_hash(&input), num);
+        cycle(&mut input,0);
+        cycle(&mut input,1);
+        cycle(&mut input,2);
+        cycle(&mut input,3);
+        num += 1;
+    }
+
+    let num_before_repeat = history.get(&calculate_hash(&input)).unwrap();
+    let period = num-num_before_repeat;
+    let num_before_repeat = num_before_repeat % period;
+    let num_to_go = (period - num_before_repeat) + (1000000000 % period);
+
+    for _ in 0..num_to_go {
+        cycle(&mut input,0);
+        cycle(&mut input,1);
+        cycle(&mut input,2);
+        cycle(&mut input,3);
+    }
+
+    load(&input)
+}
+
+fn calculate_hash<T: Hash>(t: &T) -> u64 {
+    let mut s = DefaultHasher::new();
+    t.hash(&mut s);
+    s.finish()
+}
+
+
+fn load(rocks: &Vec<Vec<char>>) -> usize {
+    let mut sum: usize = 0;
+    for x in 0..rocks[0].len() {
+        for y in 0..rocks.len() {
+            match rocks[y][x] {
                 'O' => {
-                    anchors.entry(curr).and_modify(|z| *z += 1).or_insert(1);
+                    sum += rocks.len() - y;
                 },
                 _ => (),
             }
         }
     }
-
-    let mut sum = 0;
-    for ((_,y),num) in &anchors {
-        for i in 0..*num {
-            sum += input.len() - y - i;
-        }
-
-    }
     sum
 }
 
-pub fn part2(input_file: &str) -> usize {
-    0
+fn cycle(rocks: &mut Vec<Vec<char>>, dir: u8) {
+    match dir {
+        0 => {
+            for x in 0..rocks[0].len() {
+                for mut y in 0..rocks.len() {
+                    match rocks[y][x] {
+                        'O' => {
+                            while y != 0 && rocks[y-1][x] == '.' {
+                                rocks[y-1][x] = rocks[y][x];
+                                rocks[y][x] = '.';
+                                y -= 1;
+                            }
+                        },
+                        _ => (),
+                    }
+
+                }
+            }
+        },
+        1 => {
+            for y in 0..rocks.len() {
+                for mut x in 0..rocks[0].len() {
+                    match rocks[y][x] {
+                        'O' => {
+                            while x != 0 && rocks[y][x-1] == '.' {
+                                rocks[y][x-1] = rocks[y][x];
+                                rocks[y][x] = '.';
+                                x -= 1;
+                            }
+                        },
+                        _ => (),
+                    }
+
+                }
+            }
+        },
+        2 => {
+            for x in 0..rocks[0].len() {
+                for mut y in (0..rocks.len()).rev() {
+                    match rocks[y][x] {
+                        'O' => {
+                            while y != rocks.len()-1 && rocks[y+1][x] == '.' {
+                                rocks[y+1][x] = rocks[y][x];
+                                rocks[y][x] = '.';
+                                y += 1;
+                            }
+                        },
+                        _ => (),
+                    }
+
+                }
+            }
+        },
+        3 => {
+            for y in 0..rocks.len() {
+                for mut x in (0..rocks[0].len()).rev() {
+                    match rocks[y][x] {
+                        'O' => {
+                            while x != rocks[0].len()-1 && rocks[y][x+1] == '.' {
+                                rocks[y][x+1] = rocks[y][x];
+                                rocks[y][x] = '.';
+                                x += 1;
+                            }
+                        },
+                        _ => (),
+                    }
+
+                }
+            }
+        },
+        _ => ()
+    }
 }
 
 
@@ -54,6 +153,6 @@ mod tests {
 
     #[test]
     fn test2() {
-        assert_eq!(part2("data/test.txt"), 0);
+        assert_eq!(part2("data/test.txt"), 64);
     }
 }
