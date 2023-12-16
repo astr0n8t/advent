@@ -2,23 +2,25 @@ use std::fs;
 use std::str::FromStr;
 use std::collections::HashMap;
 use std::collections::VecDeque;
+use std::cmp;
 
 pub fn part1(input_file: &str) -> usize {
-    parse_input(input_file).navigate()
-        .len()
+    parse_input(input_file)
+        .navigate(Beam::new(0,0,Directions::East))
 }
 
 pub fn part2(input_file: &str) -> usize {
-    0
+    parse_input(input_file)
+        .optimize()
 }
 
 #[derive(Debug)]
 enum Pieces {
-    Vertical = '|' as isize,
-    Horizontal = '-' as isize,
-    Forward = '/' as isize,
-    Backward = '\\' as isize,
-    Space = '.' as isize,
+    Vertical,
+    Horizontal,
+    Forward,
+    Backward,
+    Space,
 }
 
 impl Pieces {
@@ -35,10 +37,21 @@ impl Pieces {
 
 #[derive(Debug)]
 enum Directions {
-    North = '^' as isize,
-    South = 'v' as isize,
-    East = '>' as isize,
-    West = '<' as isize,
+    North,
+    South,
+    East,
+    West,
+}
+
+impl Directions {
+    fn val(&self) -> usize {
+        match self {
+            Directions::North => 3,
+            Directions::South => 5,
+            Directions::East => 7,
+            Directions::West => 11,
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -57,11 +70,11 @@ struct Beam {
 }
 
 impl Beam {
-    fn new() -> Self {
+    fn new(x: isize, y: isize, d: Directions) -> Self {
         Self {
-            x: 0,
-            y: 0,
-            d: Directions::East,
+            x,
+            y,
+            d,
         }
     }
     fn in_grid(&self, x_max: usize, y_max: usize) -> bool {
@@ -127,16 +140,11 @@ impl Beam {
 }
 
 impl Grid {
-    fn new() -> Self {
-        Self {
-            grid: vec![],
-        }
-    }
-    fn navigate(&self) -> HashMap<(isize,isize),usize> {
+    fn navigate(&self, start: Beam) -> usize {
         let mut energized: HashMap<(isize,isize),usize> = HashMap::new();
         let mut beams: VecDeque<Beam> = VecDeque::new();
 
-        beams.push_back(Beam::new());
+        beams.push_back(start);
 
         while beams.len() > 0 {
             let mut curr = beams.pop_front().unwrap();
@@ -176,15 +184,34 @@ impl Grid {
                     },
                     _ => ()
                 }
-                energized.entry((curr.x,curr.y)).and_modify(|x| *x += 1).or_insert(1);
+                // Break if we've already hit this spot from this direction before
                 match energized.get(&(curr.x,curr.y)) {
-                    Some(x) => if *x > 100 {break},
+                    Some(x) => if *x % curr.d.val() == 0 {break},
                     None => (),
                 };
+                // Otherwise mark this spot as visited from this direction
+                energized.entry((curr.x,curr.y)).and_modify(|x| *x *= curr.d.val()).or_insert(curr.d.val());
+                // Continue
                 curr.move_one();
             }
         }
-        energized
+        energized.len()
+    }
+    fn optimize(&mut self) -> usize {
+        let mut max = 0;
+        for x in 0..self.grid[0].len() {
+            max = cmp::max(self.navigate(Beam::new(x as isize,0,Directions::South)), max);
+        }
+        for x in 0..self.grid[0].len() {
+            max = cmp::max(self.navigate(Beam::new(x as isize,self.grid.len() as isize - 1,Directions::North)), max);
+        }
+        for y in 0..self.grid.len() {
+            max = cmp::max(self.navigate(Beam::new(0,y as isize,Directions::East)), max);
+        }
+        for y in 0..self.grid.len() {
+            max = cmp::max(self.navigate(Beam::new(self.grid[0].len() as isize - 1,y as isize,Directions::West)), max);
+        }
+        max
     }
 }
 
@@ -198,7 +225,6 @@ impl FromStr for Grid {
         })
     }
 }
-
 
 fn parse_input(input_file: &str) -> Grid {
     let input = fs::read_to_string(input_file)
@@ -217,6 +243,6 @@ mod tests {
 
     #[test]
     fn test2() {
-        assert_eq!(part2("data/test.txt"), 0);
+        assert_eq!(part2("data/test.txt"), 51);
     }
 }
