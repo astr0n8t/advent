@@ -11,7 +11,54 @@ pub fn part1(input_file: &str) -> usize {
 }
 
 pub fn part2(input_file: &str) -> usize {
-    0
+    let input = parse_input(input_file);
+
+    let mut box_map: IndexMap<u8,Box> = IndexMap::new();
+
+    for action in input.iter() {
+        if action.find("=").is_some() {
+            let (label,value) = action.split_once("=").unwrap();
+            let value = value.parse::<u8>().unwrap();
+            box_map.entry(hash(label)).and_modify(|b| b.insert(label,value)).or_insert(Box::new(label,value));
+        } else {
+            let (label,_) = action.split_once("-").unwrap();
+            box_map.entry(hash(label)).and_modify(|b| b.remove(label));
+        }
+    }
+
+    box_map.iter()
+        .map(|(i,b)|{
+            b.sum(*i as usize)
+        }).sum()
+}
+
+struct Box {
+    lenses: IndexMap<String,u8>,
+}
+
+impl Box {
+    fn new(label: &str, value: u8) -> Self {
+        let mut out = Self {
+            lenses: IndexMap::new(),
+        };
+        out.lenses.insert(String::from(label),value);
+        out
+    }
+    fn insert(&mut self, label: &str, value: u8) {
+        self.lenses.insert(String::from(label),value);
+    }
+    fn remove(&mut self, label: &str) {
+        self.lenses.shift_remove(&String::from(label));
+    }
+    fn sum(&self, id: usize) -> usize {
+        let mut sum = 0;
+        let _: usize = self.lenses.iter().enumerate()
+            .map(|(i,(_,v))|{
+                sum += (id+1)*(i+1)*(*v as usize);
+                0
+            }).sum();
+        sum
+    }
 }
 
 fn hash(s: &str) -> u8 {
@@ -45,6 +92,6 @@ mod tests {
 
     #[test]
     fn test2() {
-        assert_eq!(part2("data/test.txt"), 0);
+        assert_eq!(part2("data/test.txt"), 145);
     }
 }
