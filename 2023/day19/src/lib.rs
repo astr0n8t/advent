@@ -4,14 +4,100 @@ use std::str::FromStr;
 
 pub fn part1(input_file: &str) -> usize {
     let (rules,parts) = parse_input(input_file);
-    dbg!(rules);
-    dbg!(parts);
-    0
+    parts.iter()
+        .filter(|p| p.accepted(&rules)) 
+        .map(|p| p.sum())
+        .sum()
 }
 
+// I adapted this solution https://github.com/klimesf/advent-of-code/blob/master/src/y2023/day19.rs
+// Just a bit tired today
 pub fn part2(input_file: &str) -> usize {
-    0
+    let (rules,_) = parse_input(input_file);
+
+    let mut stack: Vec<((usize, usize), (usize, usize), (usize, usize), (usize, usize), &str, usize)> =
+        vec! {((1, 4000), (1, 4000), (1, 4000), (1, 4000), "in", 0)};
+    let mut accepted: Vec<((usize, usize), (usize, usize), (usize, usize), (usize, usize))> = vec!();
+    while let Some(range) = stack.pop() {
+        let (x, m, a, s, wf_key, rule_key) = range;
+        if wf_key == "A" {
+            accepted.push((x, m, a, s));
+            continue;
+        } else if wf_key == "R" {
+            continue;
+        }
+
+        // Invalid bounds check
+        if x.0 > x.1 || m.0 > m.1 || a.0 > a.1 || s.0 > s.1 { continue }
+
+        let rules = rules.get(wf_key).unwrap();
+        let rule = &rules.rules[rule_key];
+        match rule.op {
+            Operations::Jump => {
+                match &rule.dest[..] {
+                    "A" => {
+                        accepted.push((x, m, a, s));
+                        continue;
+                    },
+                    "R" => {
+                        continue;
+                    }
+                    _ => {
+                        stack.push((x, m, a, s, &rule.dest, 0));
+                        continue;
+                    }
+                }
+            }
+            Operations::Greater => {
+                match rule.part {
+                    'x' => {
+                        stack.push(((rule.value + 1, x.1), m, a, s, &rule.dest, 0));
+                        stack.push(((x.0, rule.value), m, a, s, wf_key, rule_key + 1));
+                    }
+                    'm' => {
+                        stack.push((x, (rule.value + 1, m.1), a, s, &rule.dest, 0));
+                        stack.push((x, (m.0, rule.value), a, s, wf_key, rule_key + 1));
+                    }
+                    'a' => {
+                        stack.push((x, m, (rule.value + 1, a.1), s, &rule.dest, 0));
+                        stack.push((x, m, (a.0, rule.value), s, wf_key, rule_key + 1));
+                    }
+                    's' => {
+                        stack.push((x, m, a, (rule.value + 1, s.1), &rule.dest, 0));
+                        stack.push((x, m, a, (s.0, rule.value), wf_key, rule_key + 1));
+                    }
+                    _ => unreachable!(),
+                }
+            }
+            Operations::Less => {
+                match rule.part {
+                    'x' => {
+                        stack.push(((x.0, rule.value - 1), m, a, s, &rule.dest, 0));
+                        stack.push(((rule.value, x.1), m, a, s, wf_key, rule_key + 1));
+                    }
+                    'm' => {
+                        stack.push((x, (m.0, rule.value - 1), a, s, &rule.dest, 0));
+                        stack.push((x, (rule.value, m.1), a, s, wf_key, rule_key + 1));
+                    }
+                    'a' => {
+                        stack.push((x, m, (a.0, rule.value - 1), s, &rule.dest, 0));
+                        stack.push((x, m, (rule.value, a.1), s, wf_key, rule_key + 1));
+                    }
+                    's' => {
+                        stack.push((x, m, a, (s.0, rule.value - 1), &rule.dest, 0));
+                        stack.push((x, m, a, (rule.value, s.1), wf_key, rule_key + 1));
+                    }
+                    _ => unreachable!(),
+                }
+            }
+        }
+    }
+
+    accepted.iter().map(|(x, m, a, s)| {
+        (x.1 - x.0 + 1) * (m.1 - m.0 + 1) * (a.1 - a.0 + 1) * (s.1 - s.0 + 1)
+    }).sum()
 }
+
 
 #[derive(Debug)]
 struct Part {
@@ -26,6 +112,18 @@ struct PartError;
 impl Part {
     fn new() -> Self {
         Self {x: 0, m: 0, a: 0, s: 0}
+    }
+    fn sum(&self) -> usize {
+        self.x + self.m + self.a + self.s
+    }
+    fn accepted(&self, rules: &HashMap<String,RuleSet>) -> bool {
+        let mut curr = String::from("in");
+        let a = String::from("A");
+        let r = String::from("R");
+        while curr != a && curr != r {
+            curr = rules.get(&curr).unwrap().process(self);
+        }
+        curr == "A"
     }
 }
 
@@ -51,13 +149,11 @@ impl FromStr for Part {
     
 }
 
-#[derive(Debug)]
+#[derive(Copy,Clone,Debug)]
 enum Operations {
     Greater,
     Less,
     Jump,
-    Accept,
-    Reject,
 }
 
 #[derive(Debug)]
@@ -73,6 +169,32 @@ struct RuleError;
 impl Rule {
     fn new() -> Self {
         Self {part: '\x00', value: 0, op: Operations::Jump, dest: String::from("")}
+    }
+    fn matches(&self, p: &Part) -> bool {
+        match self.op {
+            Operations::Greater => {
+                match self.part  {
+                    'x' => p.x > self.value,
+                    'm' => p.m > self.value,
+                    'a' => p.a > self.value,
+                    's' => p.s > self.value,
+                    _ => unreachable!(),
+                }
+            },
+            Operations::Less => {
+                match self.part  {
+                    'x' => p.x < self.value,
+                    'm' => p.m < self.value,
+                    'a' => p.a < self.value,
+                    's' => p.s < self.value,
+                    _ => unreachable!(),
+                }
+            },
+            _ => true
+        }
+    }
+    fn jump(&self) -> String {
+        self.dest.clone()
     }
 }
 
@@ -97,12 +219,7 @@ impl FromStr for Rule {
             out.part = part.chars().nth(0).unwrap();
             out.op = Operations::Greater;
         } else {
-            match s {
-                "A" => out.op = Operations::Accept,
-                "R" => out.op = Operations::Reject,
-                _ => out.dest = String::from(s),
-
-            }
+            out.dest = String::from(s);
         }
         Ok(out)
     }
@@ -118,6 +235,14 @@ struct RuleSetError;
 impl RuleSet {
     fn new() -> Self {
         Self {rules: vec![]}
+    }
+    fn process(&self, p: &Part) -> String {
+        for r in self.rules.iter() {
+            if r.matches(p) {
+                return r.jump();
+            }
+        }
+        unreachable!()
     }
 }
 
@@ -166,6 +291,6 @@ mod tests {
 
     #[test]
     fn test2() {
-        assert_eq!(part2("data/test.txt"), 0);
+        assert_eq!(part2("data/test.txt"), 167409079868000);
     }
 }
