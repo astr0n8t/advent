@@ -12,7 +12,39 @@ pub fn part1(input_file: &str) -> usize {
 }
 
 pub fn part2(input_file: &str) -> usize {
-    0
+    let mut input = parse_input(input_file);
+    let mut total_cycles = 1;
+    let mut num_cycles = 0;
+
+    while !input.get("xn").unwrap().get_sent_high() {
+        cycle(&mut input);
+        num_cycles += 1;
+    }
+    total_cycles *= num_cycles;
+    input = parse_input(input_file);
+    num_cycles = 0;
+
+    while !input.get("qn").unwrap().get_sent_high() {
+        cycle(&mut input);
+        num_cycles += 1;
+    }
+    total_cycles *= num_cycles;
+    input = parse_input(input_file);
+    num_cycles = 0;
+
+    while !input.get("xf").unwrap().get_sent_high() {
+        cycle(&mut input);
+        num_cycles += 1;
+    }
+    total_cycles *= num_cycles;
+    input = parse_input(input_file);
+    num_cycles = 0;
+
+    while !input.get("zl").unwrap().get_sent_high() {
+        cycle(&mut input);
+        num_cycles += 1;
+    }
+    total_cycles * num_cycles
 }
 
 fn cycle(h: &mut HashMap<String,Gate>) -> PulseCount {
@@ -38,6 +70,11 @@ fn cycle(h: &mut HashMap<String,Gate>) -> PulseCount {
         } else if curr.get_type() != GateKind::State || state != curr.get_state() {
             for s in curr.output.iter() {
                 queue.push_back((recipient.clone(),s.clone()));
+            }
+        }
+        if curr.get_type() == GateKind::Nand && state {
+            if !curr.get_sent_high() {
+                h.entry(recipient.clone()).and_modify(|s| s.set_sent_high());
             }
         }
         // Actually update hashmap here
@@ -87,14 +124,21 @@ struct Gate {
     output: Vec<String>,
     input: Vec<String>,
     state: bool,
+    sent_high: bool,
 }
 
 impl Gate {
     fn new(kind: GateKind) -> Self {
-        Self {kind, output: vec![], input: vec![], state: false}
+        Self {kind, output: vec![], input: vec![], state: false, sent_high: false}
     }
     fn set_state(&mut self, state: bool) {
         self.state = state;
+    }
+    fn set_sent_high(&mut self) {
+        self.sent_high = true;
+    }
+    fn get_sent_high(&self) -> bool {
+        self.sent_high
     }
     fn get_state(&self) -> bool {
         self.state
@@ -204,8 +248,4 @@ mod tests {
         assert_eq!(part1("data/test2.txt"), 11687500);
     }
 
-    #[test]
-    fn test2() {
-        assert_eq!(part2("data/test.txt"), 0);
-    }
 }
