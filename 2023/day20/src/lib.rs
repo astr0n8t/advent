@@ -12,39 +12,33 @@ pub fn part1(input_file: &str) -> usize {
 }
 
 pub fn part2(input_file: &str) -> usize {
-    let mut input = parse_input(input_file);
-    let mut total_cycles = 1;
+    let mut total = 1;
+
+    let input = parse_input(input_file);
+
+    let mut rx_input_gate: String = String::from("");
+    for (label,value) in &input {
+        if value.output.len() == 1 && value.output[0] == "rx".to_string() {
+            rx_input_gate = label.clone();
+            break;
+        }
+    }
+
+    for gate in input.get(&rx_input_gate).unwrap().input.iter() {
+        total *= get_cycles_before_high(&mut input.clone(), gate.clone());
+    }
+
+    total
+}
+
+fn get_cycles_before_high(input: &mut HashMap<String,Gate>, label: String) -> usize {
     let mut num_cycles = 0;
 
-    while !input.get("xn").unwrap().get_sent_high() {
-        cycle(&mut input);
+    while !input.get(&label).unwrap().get_sent_high() {
+        cycle(input);
         num_cycles += 1;
     }
-    total_cycles *= num_cycles;
-    input = parse_input(input_file);
-    num_cycles = 0;
-
-    while !input.get("qn").unwrap().get_sent_high() {
-        cycle(&mut input);
-        num_cycles += 1;
-    }
-    total_cycles *= num_cycles;
-    input = parse_input(input_file);
-    num_cycles = 0;
-
-    while !input.get("xf").unwrap().get_sent_high() {
-        cycle(&mut input);
-        num_cycles += 1;
-    }
-    total_cycles *= num_cycles;
-    input = parse_input(input_file);
-    num_cycles = 0;
-
-    while !input.get("zl").unwrap().get_sent_high() {
-        cycle(&mut input);
-        num_cycles += 1;
-    }
-    total_cycles * num_cycles
+    num_cycles
 }
 
 fn cycle(h: &mut HashMap<String,Gate>) -> PulseCount {
@@ -118,7 +112,7 @@ enum GateKind {
     Output,
 }
 
-#[derive(Debug)]
+#[derive(Clone,Debug)]
 struct Gate {
     kind: GateKind,
     output: Vec<String>,
