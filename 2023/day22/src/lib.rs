@@ -23,7 +23,28 @@ pub fn part1(input_file: &str) -> usize {
 }
 
 pub fn part2(input_file: &str) -> usize {
-    0
+    let mut input = parse_input(input_file);
+    input.sort_by(|a, b| a.bottom().partial_cmp(&b.bottom()).unwrap() );
+
+    for x in 0..input.len() {
+        input[x] = input[x].shift(&input);
+    }
+
+    let mut count = 0;
+    for x in 0..input.len() {
+        let mut new_input = input.clone();
+        new_input.remove(x);
+        for y in 0..new_input.len() {
+            let tmp = new_input[y].shift(&new_input);
+            if tmp != new_input[y] {
+                count += 1;
+                new_input[y] = tmp;
+            }
+
+        }
+    }
+
+    count
 }
 
 #[derive(Copy,Clone,Hash,Eq,PartialEq,Debug)]
