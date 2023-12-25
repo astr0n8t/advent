@@ -75,3 +75,7 @@ Cargo.lock
 *.pdb
 
 !*/template/data/*
+
+.aoc_tiles/*
+!.aoc_tiles/tiles/
+session.cookie
