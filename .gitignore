@@ -79,3 +79,5 @@ Cargo.lock
 .aoc_tiles/*
 !.aoc_tiles/tiles/
 session.cookie
+
+*.venv/
