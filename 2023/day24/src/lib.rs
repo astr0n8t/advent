@@ -1,6 +1,7 @@
 use std::fs;
 use std::str::FromStr;
 
+use z3::ast::{Ast, Int};
 use maths_rs::{Vec3d, line_segment_vs_line_segment};
 
 pub fn part1(input_file: &str) -> usize {
@@ -9,7 +10,8 @@ pub fn part1(input_file: &str) -> usize {
 }
 
 pub fn part2(input_file: &str) -> usize {
-    0
+    parse_input(input_file)
+        .compute_intersect_vector() as usize
 }
 
 #[derive(Debug)]
@@ -30,6 +32,40 @@ impl VectorList {
             }
         }
         total
+    }
+    // Adapted this z3 solve: https://github.com/AxlLind/AdventOfCode2023/blob/main/src/bin/24.rs
+    fn compute_intersect_vector(&self) -> i64 {
+        let ctx = z3::Context::new(&z3::Config::new());
+        let s = z3::Solver::new(&ctx);
+
+        let i_x = Int::new_const(&ctx, "i_x");
+        let i_y = Int::new_const(&ctx, "i_y");
+        let i_z = Int::new_const(&ctx, "i_z");
+        let i_x_v = Int::new_const(&ctx, "i_x_v");
+        let i_y_v = Int::new_const(&ctx, "i_y_v");
+        let i_z_v = Int::new_const(&ctx, "i_z_v");
+
+        let zero = Int::from_i64(&ctx, 0);
+
+        for (i, vec) in self.list.iter().enumerate() {
+            let x = Int::from_i64(&ctx, vec.pos.x as _);
+            let y = Int::from_i64(&ctx, vec.pos.y as _);
+            let z = Int::from_i64(&ctx, vec.pos.z as _);
+            let x_v = Int::from_i64(&ctx, vec.vel.x as _);
+            let y_v = Int::from_i64(&ctx, vec.vel.y as _);
+            let z_v = Int::from_i64(&ctx, vec.vel.z as _);
+
+            let time = Int::new_const(&ctx, format!("t{i}"));
+
+            s.assert(&time.ge(&zero));
+            s.assert(&((&x + &x_v * &time)._eq(&(&i_x + &i_x_v * &time))));
+            s.assert(&((&y + &y_v * &time)._eq(&(&i_y + &i_y_v * &time))));
+            s.assert(&((&z + &z_v * &time)._eq(&(&i_z + &i_z_v * &time))));
+        }
+        assert_eq!(s.check(), z3::SatResult::Sat);
+        let model = s.get_model().unwrap();
+        let res = model.eval(&(&i_x + &i_y + &i_z), true).unwrap();
+        res.as_i64().unwrap()
     }
 }
 
@@ -118,6 +154,6 @@ mod tests {
 
     #[test]
     fn test2() {
-        assert_eq!(part2("data/test.txt"), 0);
+        assert_eq!(part2("data/test.txt"), 47);
     }
 }

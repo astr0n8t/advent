@@ -7,3 +7,4 @@ edition = "2021"
 
 [dependencies]
 maths-rs = "0.2.5"
+z3 = "0.12.1"
