@@ -1,6 +1,8 @@
 # Advent of Code
 Advent of Code solutions
 
+Mainly written to learn different languages.  Actual solution algorithms may not be my own but should have a comment linking to where I sourced them.
+
 <!-- AOC TILES BEGIN -->
 <h1 align="center">
   2023 - 50 ⭐
@@ -160,10 +162,3 @@ Advent of Code solutions
 </a>
 <!-- AOC TILES END -->
 
-## 2023
-
-Written in Rust
-
-## 2022
-
-Written in C 
